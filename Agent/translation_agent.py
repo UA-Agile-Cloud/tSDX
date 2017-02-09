@@ -29,34 +29,43 @@ else:
 AGENT_IP_LIST = []
 try:
     agent_ip_file_loc = 'agent.txt'
+    logging.debug('Opening %s to retrive default agent IP list' % agent_ip_file_loc)
     agent_ip_file = open(agent_ip_file_loc,'r')
     for line in agent_ip_file:
         if len(line.split('.'))!= 4:
             logging.critical('The IP address read from %s is malformed %s, expect xxx.xxx.xxx.xxx' %  (agent_ip_file_loc,line.rstrip()))
             sys.exit()
         else:
-            AGENT_IP_LIST.append(line.rstrip())  
+            AGENT_IP_LIST.append(line.rstrip())
+    logging.info('Default agent IP list:%s' % str(AGENT_IP_LIST))
+    logging.debug('Agent list is successfully read')
+    logging.debug('Next step is to decide the agent IP and RYU')
 except IOError as e:
     logging.critical(e)
     logging.critical('Failed to open file %s!Check if the file exists' % agent_ip_file_loc)
     sys.exit()
 
-automated_IP_discover = True #automate discover agent's IP and then set correct RYU IP, be developed later
+automated_IP_discover = False #automate discover agent's IP and then set correct RYU IP
 if automated_IP_discover:
     """Automate find 192.168.x.x IP, and connect to a correct RYU IP.
     This might fail if this computer has more than one IP address
     having format 192.168.x.x
     """
+    logging.debug('Automatic IP discover is enabled')
     from netifaces import interfaces, ifaddresses, AF_INET
     for ifaceName in interfaces():
         addresses = [i['addr'] for i in ifaddresses(ifaceName).setdefault(AF_INET, [{'addr':'No IP addr'}] )]
-        print '%s: %s' % (ifaceName, ', '.join(addresses))
+        logging.info('interfacename:%s,address:%s' % (ifaceName, ', '.join(addresses)))
         address = str(addresses[0])
         if address == 'No IP addr':
             pass
         else:
             if address.split('.')[0:2] == ['192','168']: #The interface we care starts with 192.168.x.x
                 AGENT_IP = address
+                if AGENT_IP not in AGENT_IP_LIST:
+                    logging.warn('Agent IP %s does no belong to the default IP list' % AGENT_IP)
+                    response = raw_input('Press Enter to Continue')
+                    
                 third = AGENT_IP.split('.')[2]
                 RYU = ['192','168','0','0']
                 RYU[2] = third
@@ -64,32 +73,48 @@ if automated_IP_discover:
                 RYU_PORT = 6633
                 agent_node_file_loc = 'agent%s_node.txt' % third
                 agent_monitor_file_loc = 'agent%s_monitor.txt' % third
-                datapath_id = 16 + int(third)
-                datapath_id = chr(datapath_id)
+                datapath_id_int = 16 + int(third)
+                datapath_id = chr(datapath_id_int)
+                logging.debug('agent_node file location:%s' % (agent_node_file_loc))
+                logging.debug('agent_monitor file location:%s' % (agent_monitor_file_loc))
+                logging.debug('datapath id:%s' %(datapath_id_int))
+                logging.info('RYU IP,%s:%s' % (RYU_IP,RYU_PORT))
                 break
         
 else:
+    logging.debug('Manual IP input is enabled')
     AGENT_IP = raw_input('Enter agent IP address(xxx.xxx.xxx.xxx):')
     if AGENT_IP in AGENT_IP_LIST:
         if AGENT_IP == '192.168.1.100':
             RYU_IP = '192.168.1.0'
             agent_node_file_loc = 'agent1_node.txt'
             agent_monitor_file_loc = 'agent1_monitor.txt'
-            datapath_id = 17
-            datapath_id = chr(datapath_id)
+            datapath_id_int = 17
+            datapath_id = chr(datapath_id_int)
+            logging.debug('agent_node file location:%s' % (agent_node_file_loc))
+            logging.debug('agent_monitor file location:%s' % (agent_monitor_file_loc))
+            logging.debug('datapath id:%s' % (datapath_id_int))
         elif AGENT_IP == '192.168.2.100':
             RYU_IP = '192.168.1.0'
             agent_node_file_loc = 'agent2_node.txt'
             agent_monitor_file_loc = 'agent2_monitor.txt'
-            datapath_id = 18
-            datapath_id = chr(datapath_id)
+            datapath_id_int = 18
+            datapath_id = chr(datapath_id_int)
+            logging.debug('agent_node file location:%s' % (agent_node_file_loc))
+            logging.debug('agent_monitor file location:%s' % (agent_monitor_file_loc))
+            logging.debug('datapath id:%s' %(datapath_id_int))
+       
     else:
         logging.critical('The IP address %s you entered is not a valid agent IP!' % AGENT_IP)
         logging.critical('Exit the program.....')
         sys.exit()
     RYU_PORT = int(raw_input('Enter target tcp port (6633 by default):'))
+    logging.info('RYU IP,%s:%s' % (RYU_IP,RYU_PORT))
     if RYU_PORT != 6633:
-        logging.warning('You set non-default RYU port 6633')
+        logging.warning('You set non-default RYU port %s, the default port is 6633' % RYU_PORT)
+
+logging.debug('Agent IP and RYU IP is successtully set')
+logging.debug('Now determine the topology mapping')
     
 NODETOCONNECTION ={}
 """
@@ -182,7 +207,7 @@ WSS_SETUP_REPLY_HEADER = '\x05\x75\x00\x18\x00\x00\x00\x00'
 assert len(WSS_SETUP_REPLY_HEADER) == 8
 WSS_TEARDOWN_REPLY_HEADER = '\x05\x77\x00\x18\x00\x00\x00\x00'
 assert len(WSS_TEARDOWN_REPLY_HEADER) == 8
-GET_OSNR_REPLY_HEADER = '\x05\x79\x00\x1c\x00\x00\x00\x00'
+GET_OSNR_REPLY_HEADER = '\x05\x79\x00\x20\x00\x00\x00\x00'
 assert len(GET_OSNR_REPLY_HEADER) == 8
 
 WSS_SETUP_REQUEST_STR = '!QIIIIIIIII'
@@ -190,7 +215,7 @@ WSS_SETUP_REPLY_STR = '!QII'
 WSS_TEARDOWN_REQUEST_STR = '!QIIIIIIIII'
 WSS_TEARDOWN_REPLY_STR = '!QII'
 GET_OSNR_REQUEST_STR = '!QIIIIIIII'
-GET_OSNR_REPLY_STR = '!QIII'        
+GET_OSNR_REPLY_STR = '!QIIII'        
 
 q = Queue.Queue()
 
@@ -703,10 +728,10 @@ class TCP_bridge(object):
 
             
         OSNR_val= int(OSNRmin*10)     
-        GET_OSNR_REPLY_BODY = struct.pack(GET_OSNR_REPLY_STR,datapath_id,message_id,result,OSNR_val)
+        GET_OSNR_REPLY_BODY = struct.pack(GET_OSNR_REPLY_STR,datapath_id,message_id,node_id,result,OSNR_val)
         GET_OSNR_REPLY = ''.join([GET_OSNR_REPLY_HEADER,GET_OSNR_REPLY_BODY])
         try:
-            assert len(GET_OSNR_REPLY) == 28
+            assert len(GET_OSNR_REPLY) == 32
         except AssertionError as e:
             logging.critical(e)
             logging.critical('GET_OSNR_REPLY is not in a correct format')
