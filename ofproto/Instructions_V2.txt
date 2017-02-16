@@ -1,0 +1,49 @@
+1.First, download and install ryu. Use either git clone or pip. Following assume you use git clone.
+(a) git clone git://github.com/osrg/ryu.git
+Note: If encounter permission denied, then use sudo git clone git://github.com/osrg/ryu.git
+(b) Install ryu: cd ryu; python ./setup.py install 
+Note: It may report missing dependencies depend on you virtual machine version. If that is caused by uninstalled dependency, do pip install app. If a dependency already installed but too old, use pip install app --upgrade
+(c) After ryu successfully installed, try sudo ryu-manager. You should not see any error (although might some warnings, it is fine)
+
+2. Replace the extension files. 
+ofproto_v1_4.py and ofproto_v1_4_parser.py under ryu/ryu/controller/ofproto
+
+3. Commit changes by reinstall ryu. You must commit the actions before using new code
+cd ryu; python ./setup.py install
+
+Note: This commit may not be successful due to possible permission issues, I have not found a way to solve it. Please use the following alternative.
+
+3.(b) (Alternative): Please manually replace extension files, as my OS an example, the ryu environment is under usr/local/lib/python2.7/dist-packages/ryu/
+
+cd ryu/ryu/ofproto; 
+sudo cp ofproto_v1_4.py /usr/local/lib/python2.7/dist-packages/ryu/ofproto/ofproto_v1_4.py
+sudo cp ofproto_v1_4_parser.py /usr/local/lib/python2.7/dist-packages/ryu/ofproto/ofproto_v1_4_parser.py
+
+
+4. Create two folders under ryu. nonryuapp and customapp. 
+(a) Put database.py simpleagent.py under nonryuapp. 
+(b) Put revent.py handshake.py example1.py under customapp.
+(c) Create __init__.py under both folders (make the folder as package)
+
+5. Module description:
+revent.py: A custom event lib which is used to generate a mock request. Use this just for testing
+handshake.py: A module handles handshake between ryu and agent. The dpid<->datapath pair is stored in database.py
+example1.py: A example how to generate/handle events, and send messages to agent.
+
+6. Test:
+(a) run ryu.  ryu-manager customapp/handshake.py customapp/example1.py
+(b) run simpleagent. python simpleagent.py. You should see handshake information immediately. After 10 seconds, additional communication
+can be seen.
+
+Note: You could specify log level by using --default-log-level
+
+ryu-manager --default-log-level=30 set log level 'WARNING'
+
+>>> logging.DEBUG
+10
+>>> logging.INFO
+20
+>>> logging.WARNING
+30
+>>> logging.CRITICAL
+50
