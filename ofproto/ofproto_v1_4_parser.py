@@ -5847,7 +5847,7 @@ class OFPTGetOSNRReply(MsgBase):
         msg = super(OFPTGetOSNRReply, cls).parser(
             datapath, version, msg_type,
             msg_len, xid, buf)
-        (msg.datapath_id,msg.message_id,node_id,msg.result,msg.OSNR) = struct.unpack_from(ofproto.OFPT_OSNR_REPLY_STR,
+        (msg.datapath_id,msg.message_id,msg.node_id,msg.result,msg.OSNR) = struct.unpack_from(ofproto.OFPT_OSNR_REPLY_STR,
                                                          msg.buf,ofproto.OFP_HEADER_SIZE)
         return msg
       
