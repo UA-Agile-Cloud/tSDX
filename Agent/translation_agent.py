@@ -45,7 +45,7 @@ except IOError as e:
     logging.critical('Failed to open file %s!Check if the file exists' % agent_ip_file_loc)
     sys.exit()
 
-automated_IP_discover = False #automate discover agent's IP and then set correct RYU IP
+automated_IP_discover = True #automate discover agent's IP and then set correct RYU IP
 if automated_IP_discover:
     """Automate find 192.168.x.x IP, and connect to a correct RYU IP.
     This might fail if this computer has more than one IP address
@@ -219,6 +219,7 @@ GET_OSNR_REPLY_STR = '!QIIII'
 
 q = Queue.Queue()
 
+
 class TCP_bridge(object):
     def __init__(self):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
@@ -351,10 +352,11 @@ class TCP_bridge(object):
                 
     def WSS_setup(self,ITU_standards,datapath_id,message_id,node_id,input_port_id,output_port_id,start_channel,end_channel):
         MID = 100
+        print 'ITU=%s' % ITU_standards
         if ITU_standards == 2:
             logging.debug('ITU 50GHz grid')
             space = 2
-        if ITU_standards == 3:
+        elif ITU_standards == 3:
             logging.debug('ITU 100GHz grid')
             space = 1
         else:
@@ -385,10 +387,10 @@ class TCP_bridge(object):
             for channel in range(start_channel*space,(end_channel+1)*space,space):
                 device.chan_port_switching(channel=channel,port=inner_port,table=0,MID=MID)
                 if device.reply[2] == chr(MID) and device.reply[4] == '\x00': #No Error
-                    logging.debug('Switching channel %s on sub switch 1:OK' % (channel/2))
+                    logging.debug('Switching channel %s on sub switch 1:OK' % (channel))
                     result = result | 0  
                 else:
-                    logging.debug('Switching channel %s on sub switch 1:FAIL' % (channel/2))
+                    logging.debug('Switching channel %s on sub switch 1:FAIL' % (channel))
                     result = result | 1
         elif node_id == 2 or node_id == 3:
             logging.debug('Switch channels on node %s' % node_id)
@@ -399,20 +401,20 @@ class TCP_bridge(object):
                 for channel in range(start_channel*space,(end_channel+1)*space,space):
                     device.chan_port_switching(channel=channel,port=inner_port,table=0,MID=MID)
                     if device.reply[2] == chr(MID) and device.reply[4] == '\x00': #No Error
-                        logging.debug('Switching channel %s on sub switch 1:OK' % (channel/2))
+                        logging.debug('Switching channel %s on sub switch 1:OK' % (channel))
                         result_sub1 = result_sub1 | 0  
                     else:
-                        logging.debug('Switching channel %s on sub switch 1:FAIL' % (channel/2))
+                        logging.debug('Switching channel %s on sub switch 1:FAIL' % (channel))
                         result_sub1 = result_sub1 | 1
 
                 result_sub2 = 0
                 for channel in range(start_channel*space,(end_channel+1)*space,space):
                     device.chan_port_switching(channel=channel,port=inner_port,table=1,MID=MID)
                     if device.reply[2] == chr(MID) and device.reply[4] == '\x00': #No Error
-                        logging.debug('Switching channel %s on sub switch 2:OK' % (channel/2))
+                        logging.debug('Switching channel %s on sub switch 2:OK' % (channel))
                         result_sub2 = result_sub2 | 0  
                     else:
-                        logging.debug('Switching channel %s on sub switch 2:FAIL' % (channel/2))
+                        logging.debug('Switching channel %s on sub switch 2:FAIL' % (channel))
                         result_sub2 = result_sub1 | 1                
                 result = result_sub1 | result_sub2
         elif node_id == 4:
@@ -424,10 +426,10 @@ class TCP_bridge(object):
                 for channel in range(start_channel*space,(end_channel+1)*space,space):
                     device.chan_port_switching(channel=channel,port=inner_port,table=0,MID=MID)
                     if device.reply[2] == chr(MID) and device.reply[4] == '\x00': #No Error
-                        logging.debug('Switching channel %s on sub switch 1:OK' % (channel/2))
+                        logging.debug('Switching channel %s on sub switch 1:OK' % (channel))
                         result = result | 0  
                     else:
-                        logging.debug('Switching channel %s on sub switch 1:FAIL' % (channel/2))
+                        logging.debug('Switching channel %s on sub switch 1:FAIL' % (channel))
                         result = result | 1
             elif outport == 3:
                 logging.debug('Output port is %s' % outport)
@@ -436,20 +438,20 @@ class TCP_bridge(object):
                 for channel in range(start_channel*space,(end_channel+1)*space,space):
                     device.chan_port_switching(channel=channel,port=inner_port,table=0,MID=MID)
                     if device.reply[2] == chr(MID) and device.reply[4] == '\x00': #No Error
-                        logging.debug('Switching channel %s on sub switch 1:OK' % (channel/2))
+                        logging.debug('Switching channel %s on sub switch 1:OK' % (channel))
                         result_sub1 = result_sub1 | 0  
                     else:
-                        logging.debug('Switching channel %s on sub switch 1:FAIL' % (channel/2))
+                        logging.debug('Switching channel %s on sub switch 1:FAIL' % (channel))
                         result_sub1 = result_sub1 | 1
 
                 result_sub2 = 0
                 for channel in range(start_channel*space,(end_channel+1)*space,space):
                     device.chan_port_switching(channel=channel,port=inner_port,table=1,MID=MID)
                     if device.reply[2] == chr(MID) and device.reply[4] == '\x00': #No Error
-                        logging.debug('Switching channel %s on sub switch 2:OK' % (channel/2))
+                        logging.debug('Switching channel %s on sub switch 2:OK' % (channel))
                         result_sub2 = result_sub2 | 0  
                     else:
-                        logging.debug('Switching channel %s on sub switch 2:FAIL' % (channel/2))
+                        logging.debug('Switching channel %s on sub switch 2:FAIL' % (channel))
                         result_sub2 = result_sub1 | 1                
                 result = result_sub1 | result_sub2
                 
@@ -462,10 +464,10 @@ class TCP_bridge(object):
                 for channel in range(start_channel*space,(end_channel+1)*space,space):
                     device.chan_port_switching(channel=channel,port=inner_port,table=0,MID=MID)
                     if device.reply[2] == chr(MID) and device.reply[4] == '\x00': #No Error
-                        logging.debug('Switching channel %s on sub switch 1:OK' % (channel/2))
+                        logging.debug('Switching channel %s on sub switch 1:OK' % (channel))
                         result = result | 0  
                     else:
-                        logging.debug('Switching channel %s on sub switch 1:FAIL' % (channel/2))
+                        logging.debug('Switching channel %s on sub switch 1:FAIL' % (channel))
                         result = result | 1
                 
         elif node_id == 6:
@@ -480,16 +482,16 @@ class TCP_bridge(object):
             for channel in range(start_channel*space,(end_channel+1)*space,space):
                 device.chan_port_switching(channel=channel,port=inner_port,table=0,MID=MID)
                 if device.reply[2] == chr(MID) and device.reply[4] == '\x00': #No Error
-                    logging.debug('Switching channel %s on sub switch 1:OK' % (channel/2))
+                    logging.debug('Switching channel %s on sub switch 1:OK' % (channel))
                     result = result | 0  
                 else:
-                    logging.debug('Switching channel %s on sub switch 1:FAIL' % (channel/2))
+                    logging.debug('Switching channel %s on sub switch 1:FAIL' % (channel))
                     result = result | 1
             
         if result == 0:
-            logging.debug('Successfully switch from channel %s to channel %s' % (start_channel,end_channel))
+            logging.debug('Successfully switch from channel %s to channel %s' % (start_channel*space,end_channel*space))
         elif result == 1:
-            logging.debug('Fail to switch from channel %s to channel %s' % (start_channel,end_channel))
+            logging.debug('Fail to switch from channel %s to channel %s' % (start_channel*space,end_channel*space))
                 
         WSS_SETUP_REPLY_BODY=struct.pack(WSS_SETUP_REPLY_STR,datapath_id,message_id,result)
         WSS_SETUP_REPLY = ''.join([WSS_SETUP_REPLY_HEADER,WSS_SETUP_REPLY_BODY])
@@ -509,7 +511,7 @@ class TCP_bridge(object):
         if ITU_standards == 2:
             logging.debug('ITU 50GHz grid')
             space = 2
-        if ITU_standards == 3:
+        elif ITU_standards == 3:
             logging.debug('ITU 100GHz grid')
             space = 1
         else:
@@ -539,10 +541,10 @@ class TCP_bridge(object):
             for channel in range(start_channel*space,(end_channel+1)*space,space):
                 device.chan_port_switching(channel=channel,port=0,table=0,MID=MID)
                 if device.reply[2] == chr(MID) and device.reply[4] == '\x00': #No Error
-                    logging.debug('Delete channel %s on sub switch 1:OK' % (channel/2))
+                    logging.debug('Delete channel %s on sub switch 1:OK' % (channel))
                     result = result | 0  
                 else:
-                    logging.debug('Delete channel %s on sub switch 1:FAIL' % (channel/2))
+                    logging.debug('Delete channel %s on sub switch 1:FAIL' % (channel))
                     result = result | 1
         elif node_id == 2 or node_id == 3:
             logging.debug('Delete channels on node %s' % node_id)
@@ -552,20 +554,20 @@ class TCP_bridge(object):
                 for channel in range(start_channel*space,(end_channel+1)*space,space):
                     device.chan_port_switching(channel=channel,port=0,table=0,MID=MID)
                     if device.reply[2] == chr(MID) and device.reply[4] == '\x00': #No Error
-                        logging.debug('Delete channel %s on sub switch 1:OK' % (channel/2))
+                        logging.debug('Delete channel %s on sub switch 1:OK' % (channel))
                         result_sub1 = result_sub1 | 0  
                     else:
-                        logging.debug('Delete channel %s on sub switch 1:FAIL' % (channel/2))
+                        logging.debug('Delete channel %s on sub switch 1:FAIL' % (channel))
                         result_sub1 = result_sub1 | 1
 
                 result_sub2 = 0
                 for channel in range(start_channel*space,(end_channel+1)*space,space):
                     device.chan_port_switching(channel=channel,port=0,table=1,MID=MID)
                     if device.reply[2] == chr(MID) and device.reply[4] == '\x00': #No Error
-                        logging.debug('Delete channel %s on sub switch 2:OK' % (channel/2))
+                        logging.debug('Delete channel %s on sub switch 2:OK' % (channel))
                         result_sub2 = result_sub2 | 0  
                     else:
-                        logging.debug('Delete channel %s on sub switch 2:FAIL' % (channel/2))
+                        logging.debug('Delete channel %s on sub switch 2:FAIL' % (channel))
                         result_sub2 = result_sub1 | 1                
                 result = result_sub1 | result_sub2
         elif node_id == 4:
@@ -576,10 +578,10 @@ class TCP_bridge(object):
                 for channel in range(start_channel*space,(end_channel+1)*space,space):
                     device.chan_port_switching(channel=channel,port=0,table=0,MID=MID)
                     if device.reply[2] == chr(MID) and device.reply[4] == '\x00': #No Error
-                        logging.debug('Delete channel %s on sub switch 1:OK' % (channel/2))
+                        logging.debug('Delete channel %s on sub switch 1:OK' % (channel))
                         result = result | 0  
                     else:
-                        logging.debug('Delete channel %s on sub switch 1:FAIL' % (channel/2))
+                        logging.debug('Delete channel %s on sub switch 1:FAIL' % (channel))
                         result = result | 1
             elif outport == 3:
                 logging.debug('Output port is %s' % outport)
@@ -587,20 +589,20 @@ class TCP_bridge(object):
                 for channel in range(start_channel*space,(end_channel+1)*space,space):
                     device.chan_port_switching(channel=channel,port=0,table=0,MID=MID)
                     if device.reply[2] == chr(MID) and device.reply[4] == '\x00': #No Error
-                        logging.debug('Delete channel %s on sub switch 1:OK' % (channel/2))
+                        logging.debug('Delete channel %s on sub switch 1:OK' % (channel))
                         result_sub1 = result_sub1 | 0  
                     else:
-                        logging.debug('Delete channel %s on sub switch 1:FAIL' % (channel/2))
+                        logging.debug('Delete channel %s on sub switch 1:FAIL' % (channel))
                         result_sub1 = result_sub1 | 1
 
                 result_sub2 = 0
                 for channel in range(start_channel*space,(end_channel+1)*space,space):
                     device.chan_port_switching(channel=channel,port=0,table=1,MID=MID)
                     if device.reply[2] == chr(MID) and device.reply[4] == '\x00': #No Error
-                        logging.debug('Delete channel %s on sub switch 2:OK' % (channel/2))
+                        logging.debug('Delete channel %s on sub switch 2:OK' % (channel))
                         result_sub2 = result_sub2 | 0  
                     else:
-                        logging.debug('Delete channel %s on sub switch 2:FAIL' % (channel/2))
+                        logging.debug('Delete channel %s on sub switch 2:FAIL' % (channel))
                         result_sub2 = result_sub1 | 1                
                 result = result_sub1 | result_sub2
                 
@@ -612,10 +614,10 @@ class TCP_bridge(object):
                 for channel in range(start_channel*space,(end_channel+1)*space,space):
                     device.chan_port_switching(channel=channel,port=0,table=0,MID=MID)
                     if device.reply[2] == chr(MID) and device.reply[4] == '\x00': #No Error
-                        logging.debug('Delete channel %s on sub switch 1:OK' % (channel/2))
+                        logging.debug('Delete channel %s on sub switch 1:OK' % (channel))
                         result = result | 0  
                     else:
-                        logging.debug('Delete channel %s on sub switch 1:FAIL' % (channel/2))
+                        logging.debug('Delete channel %s on sub switch 1:FAIL' % (channel))
                         result = result | 1
                 
         elif node_id == 6:
@@ -628,16 +630,16 @@ class TCP_bridge(object):
             for channel in range(start_channel*space,(end_channel+1)*space,space):
                 device.chan_port_switching(channel=channel,port=0,table=0,MID=MID)
                 if device.reply[2] == chr(MID) and device.reply[4] == '\x00': #No Error
-                    logging.debug('Delete channel %s on sub switch 1:OK' % (channel/2))
+                    logging.debug('Delete channel %s on sub switch 1:OK' % (channel))
                     result = result | 0  
                 else:
-                    logging.debug('Delete channel %s on sub switch 1:FAIL' % (channel/2))
+                    logging.debug('Delete channel %s on sub switch 1:FAIL' % (channel))
                     result = result | 1
             
         if result == 0:
-            logging.debug('Successfully delete from channel %s to channel %s' % (start_channel,end_channel))
+            logging.debug('Successfully delete from channel %s to channel %s' % (start_channel*space,end_channel*space))
         elif result == 1:
-            logging.debug('Fail to delete from channel %s to channel %s' % (start_channel,end_channel))
+            logging.debug('Fail to delete from channel %s to channel %s' % (start_channel*space,end_channel*space))
                 
         WSS_TEARDOWN_REPLY_BODY=struct.pack(WSS_TEARDOWN_REPLY_STR,datapath_id,message_id,result)
         WSS_TEARDOWN_REPLY = ''.join([WSS_TEARDOWN_REPLY_HEADER,WSS_TEARDOWN_REPLY_BODY])
@@ -691,12 +693,12 @@ class TCP_bridge(object):
                 power1 = device.chtopower[channel]
                 if power1 == -100.0:
                     result = result | 1
-                    logging.debug('Check Channel %s sideband power: failed' % (channel/space))
+                    logging.debug('Check Channel %s sideband power: failed' % (channel))
                 else:
-                    logging.debug('Check Channel %s power:%s dBm: Success' % (channel/space,power1))
+                    logging.debug('Check Channel %s power:%s dBm: Success' % (channel,power1))
             else:
                 result = result | 1
-                logging.debug('Check Channel %s power: failed' % (channel/space))
+                logging.debug('Check Channel %s power: failed' % (channel))
 ##                break
 
             device.per_channel_monitor(channel=channel-1,table=subswitch_id,MID=MID)
@@ -704,12 +706,12 @@ class TCP_bridge(object):
                 power2 = device.chtopower[channel-1]
                 if power2 == -100.0:
                     result = result | 1
-                    logging.debug('Check Channel %s sideband power: failed' % (channel/space))
+                    logging.debug('Check Channel %s sideband power: failed' % (channel))
                 else:
-                    logging.debug('Check Channel %s sideband power:%s dBm: Success' % (channel/space,power2))
+                    logging.debug('Check Channel %s sideband power:%s dBm: Success' % (channel,power2))
             else:
                 result = result | 1
-                logging.debug('Check Channel %s sideband power: failed' % (channel/space))
+                logging.debug('Check Channel %s sideband power: failed' % (channel))
 ##                break
             if result == 0:
                 osnr = power1 - power2 + 6  #0.1nm noise reference
@@ -722,9 +724,9 @@ class TCP_bridge(object):
         logging.debug('OSNR results:%s' % (str(OSNR)))
         logging.info('Worst OSNR is %s at channel %s' % (OSNRmin,OSNRmin_channel))
         if result == 0:
-            logging.debug('Successfully monitor OSNR from channel %s to channel %s' % (start_channel,end_channel))
+            logging.debug('Successfully monitor OSNR from channel %s to channel %s' % (start_channel*space,end_channel*space))
         elif result == 1:
-            logging.debug('Fail to monitor OSNR from channel %s to channel %s' % (start_channel,end_channel))
+            logging.debug('Fail to monitor OSNR from channel %s to channel %s' % (start_channel*space,end_channel*space))
 
             
         OSNR_val= int(OSNRmin*10)     
