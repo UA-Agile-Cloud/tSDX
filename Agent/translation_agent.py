@@ -352,7 +352,6 @@ class TCP_bridge(object):
                 
     def WSS_setup(self,ITU_standards,datapath_id,message_id,node_id,input_port_id,output_port_id,start_channel,end_channel):
         MID = 100
-        print 'ITU=%s' % ITU_standards
         if ITU_standards == 2:
             logging.debug('ITU 50GHz grid')
             space = 2
@@ -493,6 +492,7 @@ class TCP_bridge(object):
         elif result == 1:
             logging.debug('Fail to switch from channel %s to channel %s' % (start_channel*space,end_channel*space))
                 
+        logging.debug('return message_id=%s' % str(message_id))
         WSS_SETUP_REPLY_BODY=struct.pack(WSS_SETUP_REPLY_STR,datapath_id,message_id,result)
         WSS_SETUP_REPLY = ''.join([WSS_SETUP_REPLY_HEADER,WSS_SETUP_REPLY_BODY])
         try:
@@ -641,6 +641,7 @@ class TCP_bridge(object):
         elif result == 1:
             logging.debug('Fail to delete from channel %s to channel %s' % (start_channel*space,end_channel*space))
                 
+        logging.debug('return message_id=%s' % str(message_id))
         WSS_TEARDOWN_REPLY_BODY=struct.pack(WSS_TEARDOWN_REPLY_STR,datapath_id,message_id,result)
         WSS_TEARDOWN_REPLY = ''.join([WSS_TEARDOWN_REPLY_HEADER,WSS_TEARDOWN_REPLY_BODY])
         try:
@@ -729,7 +730,10 @@ class TCP_bridge(object):
             logging.debug('Fail to monitor OSNR from channel %s to channel %s' % (start_channel*space,end_channel*space))
 
             
-        OSNR_val= int(OSNRmin*10)     
+        OSNR_val= int(OSNRmin*10)
+        if OSNR_val < 0:
+            OSNR_val = 0
+        logging.debug('return message_id=%s' % str(message_id))
         GET_OSNR_REPLY_BODY = struct.pack(GET_OSNR_REPLY_STR,datapath_id,message_id,node_id,result,OSNR_val)
         GET_OSNR_REPLY = ''.join([GET_OSNR_REPLY_HEADER,GET_OSNR_REPLY_BODY])
         try:
