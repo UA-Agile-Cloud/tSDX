@@ -5,7 +5,7 @@ Author:   Yao Li (yaoli@optics.arizona.edu.cn)
 Created:  2017/01/09
 Version:  1.0
 
-Last modified by Yao: 2017/01/20
+Last modified by Yao: 2017/02/09
 
 """
 
@@ -21,10 +21,12 @@ class North_CrossDomainTrafficRequestEvent(event.EventBase):
         self.traf_id = 0
         self.traf_stage = 0
         self.traf_state = 0
-        self.src_node_ip = 0
-        self.dst_node_ip = 0
+        self.src_node_ip = ''
+        self.dst_node_ip = ''
         self.traf_type = 0
         self.prot_type = 0
+        self.up_time = None
+        self.down_time = None
         self.bw_demand = 0
         self.OSNR_req = 0
         self.domain_num = 0
@@ -38,12 +40,16 @@ class North_IntraDomainTrafficRequestEvent(event.EventBase):
         self.traf_id = 0
         self.traf_stage = 0
         self.traf_state = 0
-        self.src_node_ip = 0
-        self.dst_node_ip = 0
+        self.src_node_ip = ''
+        self.dst_node_ip = ''
         self.traf_type = 0
         self.prot_type = 0
+        self.up_time = None
+        self.down_time = None
         self.bw_demand = 0
         self.OSNR_req = 0
+        self.domain_num = 0
+        self.domain_sequence = []
         
 class North_TrafficReplyEvent(event.EventBase):
 #generate: Intra_domain_connection_ctrl, Cross_domain_connection_ctrl
@@ -122,19 +128,19 @@ class South_LSPTeardownReplyEvent(event.EventBase):
         self.traf_id = 0
         self.result = None
  
-class South_OSNRMonitoringRequest(event.EventBase):
+class South_OSNRMonitoringRequestEvent(event.EventBase):
 #generate: Intra_domain_connection_ctrl, Cross_domain_connection_ctrl
 #listening: Monitoring
    def __init__(self):
-        super(South_OSNRMonitoringRequest, self).__init__() 
+        super(South_OSNRMonitoringRequestEvent, self).__init__() 
         self.traf_id = 0
         self.route_type = None
         
-class South_OSNRMonitoringReply(event.EventBase):
+class South_OSNRMonitoringReplyEvent(event.EventBase):
 #generate: Monitoring
 #listening: Intra_domain_connection_ctrl, Cross_domain_connection_ctrl 
    def __init__(self):
-        super(South_OSNRMonitoringReply, self).__init__() 
+        super(South_OSNRMonitoringReplyEvent, self).__init__() 
         self.traf_id = 0
         self.route_type = None
         self.result = None
@@ -207,6 +213,7 @@ class EastWest_SendTrafSetupReplyEvent(event.EventBase):
         self.traf_id = 0
         self.traf_stage = 0
         self.traf_state = 0
+        self.result = None
         
 class EastWest_ReceiveTrafSetupReplyEvent(event.EventBase):
 #generate: EastWest_message_receive
@@ -216,6 +223,7 @@ class EastWest_ReceiveTrafSetupReplyEvent(event.EventBase):
         self.traf_id = 0
         self.traf_stage = 0
         self.traf_state = 0
+        self.result = None
  
 class EastWest_SendTrafTeardownRequest(event.EventBase):
 #generate: Cross_domain_connection_ctrl
@@ -282,7 +290,7 @@ class EastWest_ReceiveOSNRMonitoringRequestEvent(event.EventBase):
         super(EastWest_ReceiveOSNRMonitoringRequestEvent, self).__init__() 
         self.traf_id = 0
         self.route_type = None
-        self.result = None
+        #self.result = None
 
 class EastWest_SendOSNRMonitoringReplyEvent(event.EventBase):
 #generate: Cross_domain_connection_ctrl

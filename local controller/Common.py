@@ -5,13 +5,24 @@ Author:   Yao Li (yaoli@optics.arizona.edu.cn)
 Created:  2017/01/09
 Version:  2.0
 
-Last modified by Yao: 2017/01/20
+Last modified by Yao: 2017/02/14
 
 """
 
 import logging
 
 # Marcos
+
+# Eastwest bound massage header type
+EW_PATH_COMP_REQ = 0x01
+EW_PATH_COMP_REPLY = 0x02
+EW_TRAF_SETUP_REQ = 0x03
+EW_TRAF_SETUP_REPLY = 0x04
+EW_TRAF_TEAR_REQ = 0x05
+EW_TRAF_TEAR_REPLY = 0x06
+EW_TRAF_TEAR_PATH_REQ = 0x07
+EW_OSNR_MONITOR_REQ = 0x08
+EW_OSNR_MONITOR_REPLY = 0x09
 
 # node type
 NODE_EDGE = 0x01
@@ -43,6 +54,7 @@ LSP_INACTIVE = 0x06
 # Route Type
 ROUTE_WORKING = 0x01
 ROUTE_BACKUP = 0x02
+ROUTE_INTRA_REROUTE = 0x03
 ROUTE_REROUTE = 0x04
 
 # Traffic Stage
@@ -94,7 +106,30 @@ TIMEOUT_TRAF_TEARDOWN = 0x04
 TIMEOUT_REROUTING = 0x05
 TIMEOUT_OSNR_MONITORING = 0x06
 
+#Waiting time:
+SOUTH_WAITING_TIME = 30
+NORTH_WAITING_TIME = 120
+EASTWEST_WAITING_TIME = 30
+
+# action
+ACTION_SETUP = 0x01
+ACTION_TEARDOWN = 0x02
+
+# OSNR threshold
+OSNR_THRESHOLD = 18
+
 # Marcos end
 
-log_level = logging.INFO
+# other parameters
+
+log_level = logging.DEBUG
+file_path = 'init_files/Ryu_1/'
+
+# other parameters end
+
+# tmp use
+
+DPID = 17
+
+# tmp use end
 
