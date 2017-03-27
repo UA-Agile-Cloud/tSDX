@@ -1,0 +1,1 @@
+ryu-manager --verbose Cross_domain_connection_ctrl.py EastWest_bound_message_receiving.py EastWest_bound_message_sending.py Path_computation.py Initialization.py Intra_domain_connection_ctrl.py Monitoring.py South_bound_message_receiving.py handshake.py North_bound_message_receiving.py North_bound_message_sending.py
