@@ -1,42 +1,31 @@
 """
-send north-bound messages 
-
-Author:   Yao Li (yaoli@optics.arizona.edu.cn)
-Created:  2017/01/18
-Version:  1.0
-
-Last modified by Yao: 2017/01/20
+Ryu Northbound Message Sending app by Jiakai Yu
 
 """
 
-
+# please install json, yaml, pycurl
 from ryu.base import app_manager
 from ryu.controller.handler import set_ev_cls
 from ryu.lib import hub
-#import Common
-#import Database
-
-
 import json
 import yaml
 import pycurl
-
 import json
 import httplib
 import logging
 import requests
-
 from ryu.base import app_manager
 import Custom_event
 from webob import Response
 from ryu.app.wsgi import ControllerBase
-
 
 LOG = logging.getLogger('ryu.app.NBMSrest')
 #RESTAPIobj = None
 #global RESTAPIobj
 #RESTAPIobj = 
 
+
+#receive the message from RYU controller and forward it in JSON format to ONOS RequestReceving app
 class North_bound_message_send(app_manager.RyuApp):
     
     _EVENTS =  [Custom_event.North_TrafficReplyEvent,
@@ -46,8 +35,6 @@ class North_bound_message_send(app_manager.RyuApp):
     def __init__(self,*args,**kwargs):
         super(North_bound_message_send,self).__init__(*args,**kwargs)
         
-   # def __init__(self, req, link, data, **config):
-    #    ControllerBase.__init__(self,req, link, data, **config)
 
     @set_ev_cls(Custom_event.North_TrafficReplyEvent)
     def _handle_traffic_reply(self,ev):
@@ -106,7 +93,8 @@ class North_bound_message_send(app_manager.RyuApp):
         print '.............................'
         print data_string
         return data_string
- 
+
+ # the fowllowing codes are used for test
 '''class RestStatsApi(app_manager.RyuApp):
     _EVENTS =  [Custom_event.North_TrafficReplyEvent,
                 Custom_event.North_TrafficTeardownReplyEvent,
