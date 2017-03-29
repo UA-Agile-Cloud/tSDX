@@ -1,1 +1,9 @@
 central orchestrator 
+
+ONOS Controller Illustration
+by Jiakai Yu
+
+These two apps are RequestReceiving and RequestSending, which are integrated in ONOS.
+1. the RequestSending app reads the request from a TXT document, and does some analysis and identification for the request
+   and then sends the request to correct local RYU controllers.
+2. the RequestReceiving receives the respond from Ryu to get the notification about the link setup.
