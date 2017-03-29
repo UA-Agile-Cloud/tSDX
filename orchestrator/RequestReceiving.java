@@ -1,5 +1,5 @@
 /*
-RequestReceiving ONOS App by Jiakai Yu
+ONOS RequestReceiving App by Jiakai Yu
  */
 
 import java.io.IOException;
@@ -60,8 +60,6 @@ public class RequestReceiving {
             e.printStackTrace();
         }
     }
-
-
 
 
     public static void main(String[] args) {
