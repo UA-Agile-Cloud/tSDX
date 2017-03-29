@@ -1,11 +1,5 @@
 """
-Generate events after receiving north-bound messages 
-
-Author:   Yao Li (yaoli@optics.arizona.edu.cn)
-Created:  2017/01/16
-Version:  1.0
-
-Last modified by Yao: 2017/01/20
+Ryu Northbound Message Receiving app by Jiakai Yu
 
 """
 
@@ -13,23 +7,16 @@ from ryu.base import app_manager
 from ryu.controller.handler import set_ev_cls
 from ryu.lib import hub
 from Common import *
-#import Database
-#from ryu.lib import Custom_events
 import logging
-#import MySQLdb
 import SocketServer
-
-
 import urllib
 import urllib2
 import httplib
 import requests
-
 import json
 import yaml
 import pycurl
 from webob import Response
-
 from ryu.base import app_manager
 from ryu.controller import ofp_event, event
 import Custom_event
@@ -48,31 +35,15 @@ from StringIO import StringIO
 
 
 LOG = logging.getLogger('ryu.app.NBMRrest')
-
 RESTAPIobj = None
 
-class North_bound_message_receive(ControllerBase):#app_manager.RyuApp): 
+class North_bound_message_receive(ControllerBase):
     
     _EVENTS =  [Custom_event.North_CrossDomainTrafficRequestEvent,
                 Custom_event.North_IntraDomainTrafficRequestEvent,
                 Custom_event.North_IntraDomainTrafficTeardownRequestEvent,
                 Custom_event.North_CrossDomainTrafficTeardownRequestEvent]
                 
-   # def __init__(self,*args,**kwargs):
-       # super(North_bound_message_receive,self).__init__(*args,**kwargs)
-       # self.listening_thread = hub.spawn(self._listening)
-        
- #   def _listening(self):
-        #pass
-        #while True:
-            #receive a message
-            #setup a timer in north_timer
-            #send events to other modules based on message type
-            #if there are items in north_timer to be timeout:
-            #   send timeout reply
-            #   delete these timers
-            #hub.sleep(1)
-
     def __init__(self, req, link, data, **config):
         ControllerBase.__init__(self,req, link, data, **config)
         #self.listening_thread = hub.spawn(self._listening)
@@ -81,7 +52,8 @@ class North_bound_message_receive(ControllerBase):#app_manager.RyuApp):
         print '=========================================================='
         #print req
         #print '----------------------------------'
-
+        
+    #receve traffic and get the json format of it, and identify the link setup request class
     def handle_traffic_request(self, req, cmd, **_kwargs):
         json_str = req.body
         decoded = yaml.load(json_str)
@@ -126,6 +98,8 @@ class North_bound_message_receive(ControllerBase):#app_manager.RyuApp):
                     traffic_request.domain_sequence = [1, 2]
                 elif request_class == 'CorssDomainRequest_rev':
                     traffic_request.domain_sequence = [2, 1]
+                    
+                #send the event to RYU controller based on the ONOS forwarded request
                 RESTAPIobj.send_event('Cross_domain_connection_ctrl', traffic_request)
 
                 status_return = {'Result':'CorssDomainRequest Received',
@@ -149,6 +123,7 @@ class North_bound_message_receive(ControllerBase):#app_manager.RyuApp):
                 print '.............................'
                 print data_string
                 return data_string
+            
             elif request_class == 'IntraDomainRequest' or request_class == 'IntraDomainRequest_rev':
                 traffic_request = Custom_event.North_IntraDomainTrafficRequestEvent()
                 if int(decoded['Source_Node'])<4:
@@ -239,6 +214,7 @@ class RestStatsApi(app_manager.RyuApp):
         'wsgi': WSGIApplication
     }
 
+    #set up a Web Server Gateway Interface to receive message
     def __init__(self, *args, **kwargs):
         super(RestStatsApi, self).__init__(*args, **kwargs)
         wsgi = kwargs['wsgi']
