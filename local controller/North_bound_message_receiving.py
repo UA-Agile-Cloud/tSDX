@@ -2,7 +2,7 @@
 Ryu Northbound Message Receiving app by Jiakai Yu
 
 """
-
+# please install json, yaml, pycurl
 from ryu.base import app_manager
 from ryu.controller.handler import set_ev_cls
 from ryu.lib import hub
