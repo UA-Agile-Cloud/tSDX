@@ -1,7 +1,7 @@
 """
 contains data structures in Ryu controller
 
-Author:   Yao Li (yaoli@optics.arizona.edu.cn)
+Author:   Yao Li (yaoli@optics.arizona.edu)
 Created:  2017/01/09
 Version:  2.0
 

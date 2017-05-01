@@ -1,7 +1,7 @@
 """
 listening to openflow events
 
-Author:   Yao Li (yaoli@optics.arizona.edu.cn)
+Author:   Yao Li (yaoli@optics.arizona.edu)
 Created:  2017/01/18
 Version:  1.0
 
@@ -182,17 +182,17 @@ class South_bound_message_receive(app_manager.RyuApp):
                             with open('record_time.txt', 'a') as f:
                                 f.write('South setup time: (route_type = ')
                                 if this_traf.traf_state == TRAFFIC_INTRA_DOMAIN_REROUTE_SUCCESS:
-                                f.write(str(ROUTE_INTRA_REROUTE)+')\n')
+                                    f.write(str(ROUTE_INTRA_REROUTE)+')\n')
                                 elif this_traf.traf_stage == TRAFFIC_REROUTING:
-                                f.write(str(ROUTE_REROUTE)+')\n')
+                                    f.write(str(ROUTE_REROUTE)+')\n')
                                 else:
-                                f.write(str(ROUTE_WORKING)+')\n')
+                                    f.write(str(ROUTE_WORKING)+')\n')
                                 f.write(str(time.time() - Database.Data.south_setup_time)+'\n')
                             Database.Data.south_setup_time = 0
                             #for recording excusion time end
                             break
                         if flag_find_msg == True:
-                break
+                            break
             elif result == FAIL:
                 flag_find_msg = False
                 for tmp_timer in Database.Data.south_timer:
@@ -321,9 +321,9 @@ class South_bound_message_receive(app_manager.RyuApp):
                             with open('record_time.txt', 'a') as f:
                                 f.write('South teardown path time: (route_type = ')
                                 if this_traf.traf_state == TRAFFIC_INTRA_DOMAIN_REROUTE_SUCCESS:
-                                f.write(str(ROUTE_WORKING)+')\n')
+                                    f.write(str(ROUTE_WORKING)+')\n')
                                 else :
-                                f.write(str(ROUTE_REROUTE)+')\n')
+                                    f.write(str(ROUTE_REROUTE)+')\n')
                                 f.write(str(time.time() - Database.Data.south_teardown_path_time)+'\n')
                             Database.Data.south_teardown_path_time = 0
                             #for recording excusion time end

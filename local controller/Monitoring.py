@@ -1,7 +1,7 @@
 """
 Handle physical layer monitoring
 
-Author:   Yao Li (yaoli@optics.arizona.edu.cn)
+Author:   Yao Li (yaoli@optics.arizona.edu)
 Created:  2017/01/09
 Version:  1.0
 

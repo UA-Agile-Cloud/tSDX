@@ -1,11 +1,11 @@
 """
-Inter-domain connection control
+Cross-domain connection control
 
-Author:   Yao Li (yaoli@optics.arizona.edu.cn)
+Author:   Yao Li (yaoli@optics.arizona.edu)
 Created:  2017/01/09
-Version:  1.0
+Version:  2.0
 
-Last modified by Yao: 2017/02/15
+Last modified by Yao: 2017/4/30
 
 """
 
@@ -121,7 +121,7 @@ class Cross_domain_connection_ctrl(app_manager.RyuApp):
         #   else:
         #       send Custom_event.EastWest_SendTrafSetupRequestEvent to 'EastWest_message_send'
         #elif FAIL:  
-        #   update lsp state to LSP_SETUP_FAIL in database
+        #   #update lsp state to LSP_SETUP_FAIL in database
         #   update traffic state to TRAFFIC_SETUP_FAIL
         #   if this domain is the source domain:     
         #       send Custom_event.North_TrafficReplyEvent to 'North_bound_message_send'
@@ -173,10 +173,35 @@ class Cross_domain_connection_ctrl(app_manager.RyuApp):
                     traf_setup_req_ev.traf_id = ev.traf_id
                     traf_setup_req_ev.traf_stage = this_traf.traf_stage
                     self.send('EastWest_message_send', traf_setup_req_ev)
-        elif ev.result == FAIL: # need to be completed in the future
-            self.logger.info('LSP setup fail. (Cross_domain_connection_ctrl: _handle_lsp_setup_reply)')
-        else:   # ev.result == TIMEOUT_TRAF_SETUP or TIMEOUT_REROUTING 
-            self.logger.info('LSP setup timeout. (Cross_domain_connection_ctrl: _handle_lsp_setup_reply)')
+        else:
+            if ev.result == FAIL: # need to be completed in the future
+                self.logger.info('LSP setup fail. (Cross_domain_connection_ctrl: _handle_lsp_setup_reply)')
+            else:   # ev.result == TIMEOUT_TRAF_SETUP or TIMEOUT_REROUTING 
+                self.logger.info('LSP setup timeout. (Cross_domain_connection_ctrl: _handle_lsp_setup_reply)')
+            Database.Data.traf_list.update_traf_state(ev.traf_id, TRAFFIC_SETUP_FAIL)
+            if Database.Data.controller_list.is_this_domain(this_traf.domain_sequence[0]) == True:
+                n_traf_reply_ev = Custom_event.North_TrafficReplyEvent()
+                n_traf_reply_ev.traf_id = ev.traf_id
+                n_traf_reply_ev.result = ev.result
+                n_traf_reply_ev.traf_stage = this_traf.traf_stage
+                n_traf_reply_ev.traf_state = this_traf.traf_state
+                self.send_event('North_bound_message_send', n_traf_reply_ev)
+                ew_traf_tear_ev = Custom_event.EastWest_SendTrafTeardownRequest()
+                ew_traf_tear_ev.traf_id = ev.traf_id
+                ew_traf_tear_ev.traf_stage = this_traf.traf_stage
+                ew_traf_tear_ev.traf_state = this_traf.traf_state
+                self.send_event('EastWest_message_send', ew_traf_tear_ev)
+                s_lsp_tear_ev = Custom_event.South_LSPTeardownRequestEvent()
+                s_lsp_tear_ev.traf_id = ev.traf_id
+                self.send_event('Intra_domain_connection_ctrl', s_lsp_tear_ev)
+            else:
+                #send Custom_event.EastWest_SendTrafSetupReplyEvent to 'EastWest_message_send'
+                ew_traf_setup_reply = Custom_event.EastWest_SendTrafSetupReplyEvent()
+                ew_traf_setup_reply.traf_id = ev.traf_id
+                ew_traf_setup_reply.traf_stage = this_traf.traf_stage
+                ew_traf_setup_reply.traf_state = this_traf.traf_state
+                ew_traf_setup_reply.result = ev.result
+                self.send_event('EastWest_message_send', ew_traf_setup_reply)
         
         
     @set_ev_cls(Custom_event.EastWest_ReceiveTrafSetupRequestEvent)
@@ -502,7 +527,12 @@ class Cross_domain_connection_ctrl(app_manager.RyuApp):
                         traf_update_ev.traf_stage = ev.traf_stage
                         traf_update_ev.traf_state = ev.traf_state
                         self.send_event('North_bound_message_send', traf_update_ev)
-                        #send Custom_event.EastWest_SendTrafTeardownRequest to 'EastWest_message_send' in the future
+                        #send Custom_event.EastWest_SendTrafTeardownRequest to 'EastWest_message_send' 
+                        traf_tear_ev = Custom_event.EastWest_SendTrafTeardownRequest()
+                        traf_tear_ev.traf_id = v.traf_id
+                        traf_tear_ev.traf_stage = ev.traf_stage
+                        traf_tear_ev.traf_state = ev.traf_state
+                        self.send_event('EastWest_message_send', traf_tear_ev)
                     else:
                         self.logger.info('OSNR for traffic %d is good (rerouting)!' % ev.traf_id)
                 else:
@@ -596,10 +626,46 @@ class Cross_domain_connection_ctrl(app_manager.RyuApp):
         
     @set_ev_cls(Custom_event.EastWest_ReceiveTrafTeardownRequest)
     def _handle_receive_traffic_teardown_request(self,ev): 
-        pass
+        #pass
         #if this domain is not the destination domain:
         #   send Custom_event.EastWest_SendTrafTeardownRequest to 'EastWest_message_send'
-        #   send Custom_event.South_LSPTeardownRequestEvent to 'Intra_domain_connection_ctrl'
+        #send Custom_event.South_LSPTeardownRequestEvent to 'Intra_domain_connection_ctrl'
+        this_traf = Database.Data.traf_list.find_traf_by_id(ev.traf_id)
+        if this_traf == None:
+            self.logger.critcal('Cannot find traffic %d. (Cross_domain_connection_ctrl: _handle_receive_traffic_teardown_request)' % ev.traf_id)
+            return
+        if (Database.Data.controller_list.is_this_domain(this_traf.domain_sequence[-1]) == False):
+            traf_tear_ev = Custom_event.EastWest_SendTrafTeardownRequest()
+            traf_tear_ev.traf_id = ev.traf_id
+            traf_tear_ev.traf_stage = ev.traf_stage
+            traf_tear_ev.traf_state = ev.traf_state
+            self.send_event('EastWest_message_send', traf_tear_ev)
+
+        flag = False
+        for this_lsp in Database.Data.lsp_list.lsp_list:
+            if this_lsp.traf_id == ev.traf_id and this_lsp.lsp_state != LSP_UNPROVISIONED:
+                flage = True
+        if flag:
+            lsp_tear_ev = Custom_event.South_LSPTeardownRequestEvent()
+            lsp_tear_ev.traf_id = ev.traf_id
+            self.send_event('Intra_domain_connection_ctrl', lsp_tear_ev)
+        else:   # traffic was not successfully setup in this domain 
+            Database.Data.traf_list.update_traf_state(ev.traf_id, TRAFFIC_TEARDOWN_SUCCESS)
+            if Database.Data.controller_list.is_this_domain(this_traf.domain_sequence[-1]) == True:
+                #send Custom_event.EastWest_SendTrafTeardownReply to 'EastWest_message_send'
+                ew_tear_traf_reply_ev = Custom_event.EastWest_SendTrafTeardownReply()
+                ew_tear_traf_reply_ev.traf_id =ev.traf_id
+                ew_tear_traf_reply_ev.result = SUCCESS
+                self.send_event('EastWest_message_send', ew_tear_traf_reply_ev)
+                #delete traffic, lsp informations
+                ready_remove = list()
+                for this_lsp in Database.Data.lsp_list.lsp_list:
+                    if this_lsp.traf_id == ev.traf_id:
+                        ready_remove.append(this_lsp)
+                for lsp in ready_remove:
+                    Database.Data.lsp_list.lsp_list.remove(lsp)
+                Database.Data.traf_list.remove(this_traf)
+                
         
     @set_ev_cls(Custom_event.EastWest_ReceiveTrafTeardownReply)
     def _handle_receive_traffic_teardown_reply(self,ev): 
@@ -614,7 +680,52 @@ class Cross_domain_connection_ctrl(app_manager.RyuApp):
         #   else:
         #       send Custom_event.North_TrafficStateUpdateEvent to 'North_bound_message_send'
         #delete traffic, lsp informations
-    
+        this_traf = Database.Data.traf_list.find_traf_by_id(ev.traf_id)
+        if this_traf == None:
+            self.logger.critcal('Cannot find traffic %d. (Cross_domain_connection_ctrl: _handle_receive_traffic_teardown_reply)' % ev.traf_id)
+            return
+        if this_traf.traf_state == TRAFFIC_TEARDOWN_FAIL:
+            tmp_result = FAIL
+        else:
+            tmp_result = ev.result
+        if (Database.Data.controller_list.is_this_domain(this_traf.domain_sequence[0]) == False):   # not the source domain
+            ew_traf_tear_reply_ev = Custom_event.EastWest_SendTrafTeardownReply()
+            ew_traf_tear_reply_ev.traf_id = ev.traf_id
+            ew_traf_tear_reply_ev.result = tmp_result
+            self.send_event('EastWest_message_send', ew_traf_tear_reply_ev)
+        else:   # source domain
+            find_timer = False
+            for this_timer in Database.Data.north_timer:
+                if this_timer.traf_id == ev.traf_id and this_timer.timer_type == TIMER_TRAFFIC_TEARDOWN:
+                    find_timer = True
+                    break
+            if find_timer:
+                n_traf_tear_reply = Custom_event.North_TrafficTeardownReplyEvent()
+                n_traf_tear_reply.traf_id = ev.trad_id
+                n_traf_tear_reply.result = tmp_result
+                n_traf_tear_reply.traf_stage = this_traf.traf_stage
+                if tmp_result == SUCCESS:
+                    n_traf_tear_reply.traf_state = TRAFFIC_TEARDOWN_SUCCESS
+                else:
+                    n_traf_tear_reply.traf_state = TRAFFIC_TEARDOWN_FAIL
+                self.send_event('North_bound_message_send', n_traf_tear_reply)
+            else:
+                n_traf_tear_update = Custom_event.North_TrafficStateUpdateEvent()
+                n_traf_tear_update.traf_id = ev.trad_id
+                n_traf_tear_update.traf_stage = this_traf.traf_stage
+                if tmp_result == SUCCESS:
+                    n_traf_tear_update.traf_state = TRAFFIC_TEARDOWN_SUCCESS
+                else:
+                    n_traf_tear_update.traf_state = TRAFFIC_TEARDOWN_FAIL
+                self.send_event('North_bound_message_send', n_traf_tear_update)
+                
+        ready_remove = list()
+        for this_lsp in Database.Data.lsp_list.lsp_list:
+            if this_lsp.traf_id == ev.traf_id:
+                ready_remove.append(this_lsp)
+        for lsp in ready_remove:
+            Database.Data.lsp_list.lsp_list.remove(lsp)
+        Database.Data.traf_list.remove(this_traf)
     
     @set_ev_cls(Custom_event.EastWest_ReceiveTearDownPath)
     def _handle_receive_teardown_path_request(self,ev): 
@@ -622,9 +733,22 @@ class Cross_domain_connection_ctrl(app_manager.RyuApp):
         #if this domain is not the destination domain:
         #   send Custom_event.EastWest_SendTearDownPath to 'EastWest_message_send'
         #send Custom_event.EastWest_ReceiveTearDownPath to 'Intra_domain_connection_ctrl'
-        return
+        this_traf = Database.Data.traf_list.find_traf_by_id(ev.traf_id)
+        if this_traf == None:
+            self.logger.critcal('Cannot find traffic %d. (Cross_domain_connection_ctrl: _handle_receive_teardown_path_request)' % ev.traf_id)
+            return
+        if (Database.Data.controller_list.is_this_domain(this_traf.domain_sequence[-1]) == False):   # not the destination domain
+            ew_tear_path_ev = Custom_event.EastWest_SendTearDownPath()
+            ew_tear_path_ev.traf_id = ev.traf_id
+            ew_tear_path_ev.route_type = ev.route_type
+            self.send('EastWest_message_send', ew_tear_path_ev)
+        ew_r_tear_path_ev = Custom_event.EastWest_ReceiveTearDownPath()
+        ew_r_tear_path_ev.traf_id = ev.traf_id
+        ew_r_tear_path_ev.route_type = ev.route_type
+        self.send('Intra_domain_connection_ctrl', ew_r_tear_path_ev)
+        
               
-    @set_ev_cls(Custom_event.South_OSNRMonitoringReplyEvent)
+    @set_ev_cls(Custom_event.North_CrossDomainTrafficTeardownRequestEvent)
     def _handle_cross_domain_traffic_teardown_request(self,ev):
         pass
         #if this domain is the source domain:
@@ -632,7 +756,19 @@ class Cross_domain_connection_ctrl(app_manager.RyuApp):
         #   send Custom_event.South_LSPTeardownRequestEvent to 'Intra_domain_connection_ctrl'
         #else:
         #   do nothing
-        return
+        this_traf = Database.Data.traf_list.find_traf_by_id(ev.traf_id)
+        if this_traf == None:
+            self.logger.critcal('Cannot find traffic %d. (Cross_domain_connection_ctrl: _handle_cross_domain_traffic_teardown_request)' % ev.traf_id)
+            return
+        if (Database.Data.controller_list.is_this_domain(this_traf.domain_sequence[0]) == True):   # source domain
+            ew_traf_tear_ev = Custom_event.EastWest_SendTrafTeardownRequest()
+            ew_traf_tear_ev.traf_id = ev.traf_id
+            ew_traf_tear_ev.traf_stage = this_traf.traf_stage
+            ew_traf_tear_ev.traf_state = this_traf.traf_state
+            self.send_event('EastWest_message_send', ew_traf_tear_ev)
+            s_lsp_tear_ev = Custom_event.South_LSPTeardownRequestEvent()
+            s_lsp_tear_ev.traf_id = ev.traf_id
+            self.send_event('Intra_domain_connection_ctrl', s_lsp_tear_ev)
         
 
     

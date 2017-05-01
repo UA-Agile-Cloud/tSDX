@@ -1,7 +1,7 @@
 """
 Used for initialize the database from files
 
-Author:   Yao Li (yaoli@optics.arizona.edu.cn)
+Author:   Yao Li (yaoli@optics.arizona.edu)
 Created:  2017/01/11
 Version:  2.0
 

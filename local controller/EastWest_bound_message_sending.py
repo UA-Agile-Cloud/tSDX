@@ -1,7 +1,7 @@
 """
 EastWest message sending
 
-Author:   Yao Li (yaoli@optics.arizona.edu.cn)
+Author:   Yao Li (yaoli@optics.arizona.edu)
 Created:  2017/01/10
 Version:  1.0
 
