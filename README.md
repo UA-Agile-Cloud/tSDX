@@ -1,2 +1,2 @@
-# SDX
-SDX  controller code
+# Software-Defined Networking (SDN) Research
+transparent Software-Defined Exchange (tSDX)
