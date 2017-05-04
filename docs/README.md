@@ -16,13 +16,13 @@ This is an SDN-based hierarchical control architecture:
 
 # Key techology
 
-### Inter-domain control capability:
-
-New control mechanisms are required to implement inter-domain wavelength routing path computation/optimization and provisioning, and impairment-aware reactions and negotiations between domains based on OPM and alien wavelength performance requirements, while preserving domain autonomy and concealment. 
-
 ### Real-time signal quality monitoring mechanism:
 
 Because optical signals are transparently exchanged, forward error correction (FEC) and associated O-E-O conversion performance monitoring are no longer available, therefore new signal quality monitoring mechanisms are needed to guarantee SLAs. Recently, in-band, real-time optical performance monitoring (OPM) methods have been developed on integrated photonic platforms that can provide affordable, per-channel, continuous optical-layer performance guarantees.
+
+### Inter-domain control capability:
+
+New control mechanisms are required to implement inter-domain wavelength routing path computation/optimization and provisioning, and impairment-aware reactions and negotiations between domains based on OPM and alien wavelength performance requirements, while preserving domain autonomy and concealment. 
 
 # Collaborators:
 
