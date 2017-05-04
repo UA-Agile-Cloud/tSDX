@@ -3,6 +3,7 @@ title:        transparent Software-Defined Exchange (tSDX)
 tagline:      SDN for Optical Networks
 baseurl:      ""
 paginate:     1
+url:          https://github.com/UA-Agile-Cloud/tSDX
 
 # About/contact
 author:
