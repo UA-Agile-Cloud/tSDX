@@ -2,7 +2,7 @@
 
 A transparent software-defined exchange (tSDX) uses Optical Express Connections (OECs) at the Internet exchange points (IXPs) to pass signals through entirely in the optical layer without digital processing. This avoids the electronic delays and high cost and energy of repeated processing in line and client transceivers, routers, and switches peering at each IXP. Keeping signals in the optical domain also provides a layer of security and privacy as the data is not processed in the digital domain.
 
-# Control architecture 
+# Control Architecture 
 
 ![](image/architecture.png)
 
@@ -14,7 +14,7 @@ This is an SDN-based hierarchical control architecture:
 
 - **Agent**: a device-specified element with protocol resolution and physical layer element operational control capabilities.
 
-# Key techology
+# Key Techology
 
 ### Real-time signal quality monitoring mechanism:
 
