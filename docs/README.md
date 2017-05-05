@@ -30,5 +30,3 @@ New control mechanisms are required to implement inter-domain wavelength routing
 - Columbia University
 - Dublin City University
 
-
-![](image/logo.png)
