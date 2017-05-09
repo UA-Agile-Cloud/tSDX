@@ -26,7 +26,7 @@ New control mechanisms are required to implement inter-domain wavelength routing
 
 # Collaborators:
 
-- The University of Arizona
+- University of Arizona
 - Columbia University
 - Dublin City University
 - Trinity College Dublin
