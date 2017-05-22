@@ -42,7 +42,7 @@ def rsc_allocation(traf_id, bw_demand):
     pass
     
     
-def find_exit_of_this_domain(next_domain_id)        #completed
+def find_exit_of_this_domain(next_domain_id):        #completed
     """randomly get one edge node go outside this domain to 'next_domain_id'
        input: next_domain_id
        output: a list of [node_ip, node_port_id]. if not found, return None
@@ -55,14 +55,14 @@ def find_exit_of_this_domain(next_domain_id)        #completed
         return None
     
     
-def find_entry_of_next_domain(traf_id)
+def find_entry_of_next_domain(traf_id):
     """find one next domain's entry of traf_id's Traffic, based on Database.Data.intra_domain_path_list's information
        input: traf_id
        output: a list of [node_ip, node_port_id, route_type, cost, [common_avai_chnls]]. If not found, return None
     """
     pass
     
-def find_intra_domain_paths(exit_of_this_domain)
+def find_intra_domain_paths(exit_of_this_domain):
     """find the intra-domain routing path(s) from several candidates in Database.Data.intra_domain_path_list, based on 
        the exit node and port.
        input: exit_of_this_domain: a list of [node_ip, node_port_id, route_type, [chnls]]
