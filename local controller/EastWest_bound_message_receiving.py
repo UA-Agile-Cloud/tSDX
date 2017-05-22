@@ -5,7 +5,7 @@ Author:   Yao Li (yaoli@optics.arizona.edu)
 Created:  2017/01/19
 Version:  1.0
 
-Last modified by Yao: 2017/02/14
+Last modified by Yao: 2017/05/19
 
 """
 
@@ -115,7 +115,8 @@ class EastWest_message_receive(app_manager.RyuApp):
                     pc_reply_ev.traf_id = data[0]
                     pc_reply_ev.route_type = data[1]
                     pc_reply_ev.result = data[2]
-                    pc_reply_ev.resource_allocation = data[3]
+                    #pc_reply_ev.resource_allocation = data[3]
+                    pc_reply_ev.exit_of_this_domain = data[3]
                     self.send_event('Path_computation', pc_reply_ev)
             elif head[0] == EW_TRAF_SETUP_REQ:  #EastWest_ReceiveTrafSetupRequestEvent
                 data = pickle.loads(data[4:])
@@ -290,7 +291,8 @@ class EastWest_message_receive(app_manager.RyuApp):
                             self.logger.info('Traffic %d is inactive. (EastWest_message_receive: _listening)' % this_timer.traf_id)
                             continue
                         pc_reply_ev.result = TIMEOUT_PATH_COMPUTATION
-                        pc_reply_ev.resource_allocation = []
+                        #pc_reply_ev.resource_allocation = []
+                        pc_reply_ev.exit_of_this_domain = None
                         self.send_event('Path_computation', pc_reply_ev)
                         ready_remove.append(this_timer) #delete this timer
                         self.logger.debug('traffic %d path computation timeout (EW).' % this_timer.traf_id)

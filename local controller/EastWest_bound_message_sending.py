@@ -5,7 +5,7 @@ Author:   Yao Li (yaoli@optics.arizona.edu)
 Created:  2017/01/10
 Version:  1.0
 
-Last modified by Yao: 2017/02/14
+Last modified by Yao: 2017/05/19
 
 """
 
@@ -126,7 +126,7 @@ class EastWest_message_send(app_manager.RyuApp):
         this_socket = Database.Data.socket_client[previous_controller_ip]
         #msg = [EW_PATH_COMP_REPLY, ev.traf_id, ev.route_type, ev.result, ev.resource_allocation]
         #msg = pickle.dumps(msg)
-        msg = struct.pack('!i',EW_PATH_COMP_REPLY) + pickle.dumps([ev.traf_id, ev.route_type, ev.result, ev.resource_allocation])
+        msg = struct.pack('!i',EW_PATH_COMP_REPLY) + pickle.dumps([ev.traf_id, ev.route_type, ev.result, ev.exit_of_previous_domain])
         this_socket.send(msg)             # send message
         self.logger.debug('A EW_PATH_COMP_REPLY message sent.')
         

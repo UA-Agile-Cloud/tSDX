@@ -5,7 +5,7 @@ Author:   Yao Li (yaoli@optics.arizona.edu)
 Created:  2017/01/09
 Version:  1.0
 
-Last modified by Yao: 2017/02/09
+Last modified by Yao: 2017/05/19
 
 """
 
@@ -177,7 +177,8 @@ class EastWest_SendPathCompReplyEvent(event.EventBase):
         self.traf_id = 0
         self.route_type = 0
         self.result = None  #SUCCESS or FAIL
-        self.resource_allocation = []   # a list of [occupied chnl IDs]
+        #self.resource_allocation = []   # a list of [occupied chnl IDs]
+        self.exit_of_previous_domain = []   # a list of [node_ip, node_port_id, route_type, [chnls]]
         
 class EastWest_ReceivePathCompReplyEvent(event.EventBase):
 #generate: EastWest_message_receive
@@ -187,7 +188,8 @@ class EastWest_ReceivePathCompReplyEvent(event.EventBase):
         self.traf_id = 0
         self.route_type = 0
         self.result = None  #SUCCESS or FAIL
-        self.resource_allocation = []   # a list of [occupied chnl IDs]
+        #self.resource_allocation = []   # a list of [occupied chnl IDs]
+        self.exit_of_this_domain = []   # a list of [node_ip, node_port_id, route_type, [chnls]]
         
 class EastWest_SendTrafSetupRequestEvent(event.EventBase):
 #generate: Cross_domain_connection_ctrl

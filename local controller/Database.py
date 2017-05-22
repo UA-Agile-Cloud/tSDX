@@ -5,7 +5,7 @@ Author:   Yao Li (yaoli@optics.arizona.edu)
 Created:  2017/01/09
 Version:  2.0
 
-Last modified by Yao: 2017/02/14
+Last modified by Yao: 2017/05/16
 
 """
 
@@ -64,21 +64,64 @@ class Phy_topo:
         return None
         
     def get_out_node_id(self, next_domain_id):
-        """randomly get an edge node go outside this domain
+        """get all the edge nodes go outside this domain to 'next_domain_id'
            input: next_domain_id
-           output: node_id. if not found, return None
+           output: a list of [node_ip, node_port_id]. if not found, return None
         """
         out_node_list = list()
         for this_node in self.node_list:
             if this_node.node_type == NODE_EDGE:
                 for this_link in self.link_list:
                     if (this_link.link_type == LINK_INTER_DOMAIN) and (this_link.src_node_ip == this_node.node_ip) and (this_link.dst_domain_id == next_domain_id):
-                        out_node_list.append(this_node.node_id)
-        if out_node_list != []:
-            random.shuffle(out_node_list)          
-            return out_node_list[0]    
+                        out_node_list.append([this_node.node_ip, this_link.src_port_id])
+        if out_node_list != []:      
+            return out_node_list    
         else:    
             return None 
+
+    def get_traf_add_port(self, src_node_ip):
+        """get the add port id of src_node_ip
+           input: src_node_ip
+           output: traf_add_port_id. If not found, return None
+        """
+        for this_link in self.link_list:
+            if (this_link.link_type == LINK_AUXILIARY) and (this_link.dst_node_ip == src_node_ip):
+                return this_link.dst_port_id
+        return None
+        
+    def get_traf_drop_port(self, dst_node_ip):
+        """get the drop port id of dst_node_ip
+           input: dst_node_ip
+           output: traf_drop_port_id. If not found, return None
+        """
+        for this_link in self.link_list:
+            if (this_link.link_type == LINK_AUXILIARY) and (this_link.src_node_ip == dst_node_ip):
+                return this_link.src_port_id
+        return None
+
+    def get_traf_add_port_resouce(self, src_node_ip, traf_add_port_id):
+        """get available resouces of traf_add_port_id
+           input: src_node_ip, traf_add_port_id
+           output: [common_avai_chnls] (a list). If not found, return None
+        """
+        chnls = list()
+        for this_link in self.link_list:
+            if (this_link.link_type == LINK_AUXILIARY) and (this_link.dst_node_ip == src_node_ip) and (this_link.dst_port_id == traf_add_port_id):
+                for key, value in this_link.chnl_ava.iteritems():
+                    if value == 0:
+                        chnls.append(key)
+                return chnls
+        return None
+        
+    def get_exit_of_previous_domain(node_ip, port_id)
+        """get exit of previous domain by this domain's entry
+           input: this domain's entry: [node_ip, port_id]
+           output: previous domain's exit: [node_ip, port_id]. If not found, return None
+        """
+        for this_link in self.link_list:
+            if (this_link.link_type == LINK_INTER_DOMAIN) and (this_link.dst_node_ip == node_ip) and (this_link.dst_port_id == port_id):
+                return [this_link.src_node_ip, this_link.src_port_id]
+        return None
 
     # from Yiwen
     def get_edge_node_id(self):
@@ -100,10 +143,16 @@ class Phy_topo:
             if self.node_list[i].node_ip == node_ip:
                 return self.node_list[i].ports
 
-    def get_topo(self):
+    def get_topo(self):     #translate network topo into adjacency list 
         topo = {}
-        for i in range(0, len(self.link_list)):
-            topo[self.link_list[i].src_node_ip]=[self.link_list[i].dst_node_ip]
+        #modified by Yao 2017-05-03
+        for node in self.node_list:
+            topo[node.node_ip] = []
+        for link in self.link_list:
+            topo[link.src_node_ip].append(link.dst_node_ip)
+            
+        '''for i in range(0, len(self.link_list)):
+            topo[self.link_list[i].src_node_ip]=[self.link_list[i].dst_node_ip]'''
         
         return topo   
     # from Yiwen end
@@ -368,6 +417,7 @@ class Controller_list:
 
 class Intra_domain_path:
     def __init__(self):
+        self.path_id = 0
         self.traf_id = 0
         self.route_type = 0
         self.cost = 0
@@ -376,17 +426,20 @@ class Intra_domain_path:
         
 class Intra_domain_path_list:
     def __init__(self):
+        self.path_id = 0
         self.intra_domain_path_list = []        # list of Intra_domain_path
         
     def insert_a_new_path(self, path):
         """input: (traf_id, route_type, cost, route(a list of [node_ip, add_port_id, drop_port_id]), common_avai_chnl(a list))
            output: a bool indicates result
         """
-        for this_path in self.intra_domain_path_list:
-            if (this_path.traf_id == path[0]) and (this_path.route_type == path[1]):
-                print 'Traffic %d\'s %d path already exits!'% (path[0], path[1])
-                return False
+        #for this_path in self.intra_domain_path_list:
+        #    if (this_path.traf_id == path[0]) and (this_path.route_type == path[1]):
+        #        print 'Traffic %d\'s %d path already exits!'% (path[0], path[1])
+        #        return False
         new_path = Intra_domain_path()
+        self.path_id += 1
+        new_path.path_id = self.path_id
         new_path.traf_id = path[0]
         new_path.route_type = path[1]
         new_path.cost = path[2]
@@ -403,24 +456,31 @@ class Intra_domain_path_list:
         self.intra_domain_path_list.append(new_path)
         return True
         
-    def find_a_path(self, traf_id, route_type):
-        """input: traf_id, route_type
+    def find_a_path_by_id(self, path_id):
+        """input: path_id
            output: an instance of class Intra_domain_path; if not found, return None
         """
         for this_path in self.intra_domain_path_list:
-            if (this_path.traf_id == traf_id) and (this_path.route_type == route_type):
+            if this_path.path_id == path_id
                 return this_path
         else:
             return None
     
-    def pop_a_path(self, traf_id, route_type):
-        """input: traf_id, route_type
+    def pop_paths(self, traf_id):
+        """input: traf_id
            output: bool
         """
+        ready_remove = list()
         for this_path in self.intra_domain_path_list:
-            if (this_path.traf_id == traf_id) and (this_path.route_type == route_type):
+            if this_path.traf_id == traf_id:
+                #self.intra_domain_path_list.remove(this_path)
+                #return True
+                ready_remove.append(this_path)
+        if ready_remove != []:
+            for this_path in ready_remove:
                 self.intra_domain_path_list.remove(this_path)
-                return True
+           ready_remove.clear()
+           return True
         else:
             return False
 
@@ -611,7 +671,7 @@ class Data:
                         if (node_1.node_ip == tmp_phy_link.src_node_ip) and (node_1.drop_port_id == tmp_phy_link.src_port_id) and (node_2.node_ip == tmp_phy_link.dst_node_ip) and (node_2.add_port_id == tmp_phy_link.dst_port_id):
                             for chnl_no in new_lsp.occ_chnl:
                                 if action == ACTION_SETUP:
-                                    tmp_phy_link.chnl_ava[chnl_no] = 1
+                                    tmp_phy_link.chnl_ava[chnl_no] = lsp_id
                                 elif action == ACTION_TEARDOWN:
                                     tmp_phy_link.chnl_ava[chnl_no] = 0
                                 else:
@@ -624,7 +684,7 @@ class Data:
                     if (node_1.node_ip == tmp_phy_link.dst_node_ip) and (node_1.add_port_id == tmp_phy_link.dst_port_id):
                         for chnl_no in new_lsp.occ_chnl:
                             if action == ACTION_SETUP:
-                                tmp_phy_link.chnl_ava[chnl_no] = 1
+                                tmp_phy_link.chnl_ava[chnl_no] = lsp_id
                             elif action == ACTION_TEARDOWN:
                                 tmp_phy_link.chnl_ava[chnl_no] = 0
                             else:
@@ -635,7 +695,7 @@ class Data:
                     if (node_2.node_ip == tmp_phy_link.src_node_ip) and (node_2.drop_port_id == tmp_phy_link.src_port_id):
                         for chnl_no in new_lsp.occ_chnl:
                             if action == ACTION_SETUP:
-                                tmp_phy_link.chnl_ava[chnl_no] = 1
+                                tmp_phy_link.chnl_ava[chnl_no] = lsp_id
                             elif action == ACTION_TEARDOWN:
                                 tmp_phy_link.chnl_ava[chnl_no] = 0
                             else:

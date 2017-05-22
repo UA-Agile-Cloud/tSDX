@@ -5,7 +5,7 @@ Author:   Yao Li (yaoli@optics.arizona.edu)
 Created:  2017/01/09
 Version:  2.0
 
-Last modified by Yao: 2017/02/14
+Last modified by Yao: 2017/05/19
 
 """
 
@@ -37,6 +37,7 @@ PORT_LOCAL_DROP = 0x08
 # link type
 LINK_INTRA_DOMAIN = 0x01
 LINK_INTER_DOMAIN = 0x02
+LINK_AUXILIARY = 0x04
 
 # ITU_Standards
 FLEXIBLE_GRID = 0x01
@@ -119,6 +120,9 @@ ACTION_TEARDOWN = 0x02
 
 # OSNR threshold
 OSNR_THRESHOLD = 18
+
+# total wavelength number
+WAVE_NUM = 90
 
 # Marcos end
 

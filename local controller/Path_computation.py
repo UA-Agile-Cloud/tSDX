@@ -6,7 +6,7 @@ Author:   Yao Li (yaoli@optics.arizona.edu.cn)
 Created:  2017/01/09
 Version:  1.0
 
-Last modified by Yao: 2017/02/15
+Last modified by Yao: 2017/05/19
 
 """
 
@@ -17,7 +17,8 @@ from Common import *
 import Database
 import Custom_event
 import logging
-from rwa_core import *
+#from rwa_core import *
+import RWA_shortestpath_random as RWA
 from Common import log_level
 
 logging.basicConfig(level = log_level)
@@ -47,31 +48,82 @@ class Path_computation(app_manager.RyuApp):
         Database.Data.traf_list.update_traf_state(ev.traf_id, TRAFFIC_PATH_COMPUTATION)     # update traffic state to path_computation
         traf = Database.Data.traf_list.find_traf_by_id(ev.traf_id)
         if (traf == None):
-            self.logger.info('Can not find traf_id in database! (intra_domain_path_domputation)')
+            self.logger.info('Can not find traf_id in database! (intra_domain_path_domputation: _handle_intra_domain_traffic_pc_request)')
             return
         if (traf.prot_type == TRAFFIC_NO_PROTECTION or traf.prot_type == TRAFFIC_REROUTING_RESTORATION): 
-            source_node_id = Database.Data.phy_topo.get_node_id_by_ip(traf.src_node_ip)
-            destination_node_id = Database.Data.phy_topo.get_node_id_by_ip(traf.dst_node_ip)
-            path = self.routing(source_node_id, None, destination_node_id, traf.bw_demand)    #routing. calculate one path
-            if (path == []):
+            #source_node_id = Database.Data.phy_topo.get_node_id_by_ip(traf.src_node_ip)
+            #destination_node_id = Database.Data.phy_topo.get_node_id_by_ip(traf.dst_node_ip)
+            sources = list()
+            traf_add_port_id = Database.Data.phy_topo.get_traf_add_port(traf.src_node_ip)
+            if traf_add_port_id == None:
+                self.logger.critical('Cannot find an add port. (Path_computation: _handle_intra_domain_traffic_pc_request)')
+                return
+            common_avai_chnls = Database.Data.phy_topo.get_traf_add_port_resouce(traf.src_node_ip, traf_add_port_id)
+            if common_avai_chnls == None:
+                self.logger.critical('Cannot find an add port. (Path_computation: _handle_intra_domain_traffic_pc_request)')
+                return
+            sources.append([traf.src_node_ip, traf_add_port_id, ROUTE_WORKING, 0, common_avai_chnls])
+            destinations = list()
+            traf_drop_port_id = Database.Data.phy_topo.get_traf_drop_port(traf.dst_node_ip)
+            if traf_drop_port_id == None:
+                self.logger.critical('Cannot find an drop port. (Path_computation: _handle_intra_domain_traffic_pc_request)')
+                return
+            destinations.append([traf.dst_node_ip, traf_drop_port_id])
+            paths = RWA.routing(ev.traf_id, sources, destinations, traf.bw_demand)    #routing. calculate one path
+            if (paths == None):
                 #Database.Data.traf_list.update_traf_state(traf.traf_id, TRAFFIC_PATH_COMPUTATION_FAIL) 
                 pc_reply_ev = Custom_event.IntraDomainPathCompReplyEvent()
                 pc_reply_ev.traf_id = ev.traf_id
                 pc_reply_ev.result = FAIL
                 self.send_event('Intra_domain_connection_ctrl',pc_reply_ev)
                 # delete traffic information
+                Database.Data.traf_list.remove(traf)
             else:
-                comm_avai_chnl = path[2]
-                resources = self.rsc_allocation(comm_avai_chnl, traf.bw_demand)
-                if (Database.Data.insert_new_lsp(path, resources) == False):
-                    self.logger.info('Insert unprovisioned lsp error!')
-                    sys.exit(1);
+                result = SUCCESS
+                for path in paths:
+                    Database.Data.intra_domain_path_list.insert_a_new_path(path)    #record the result of routing
+                resources = RWA.rsc_allocation(ev.traf_id, traf.bw_dmd)
+                for path_item in resources:
+                    new_path = Database.Data.intra_domain_path_list.find_a_path_by_id(path_item[0])
+                    if new_path == None:
+                        self.logger.critical('Cannot intra-domain path for traffic %d.' % ev.traf_id)
+                        result = FAIL
+                        break
+                    if new_path.route_type == ROUTE_WORKING:
+                        Database.Data.insert_new_lsp(new_path, path_item[1])
+                    else: 
+                        self.logger.critical('Wrong route type. (Path_computation: _handle_intra_domain_traffic_pc_request)')
+                        return
+                Database.Data.intra_domain_path_list.pop_paths(ev.traf_id)
+                if result == SUCCESS:
+                    Database.Data.traf_list.update_traf_state(ev.traf_id, TRAFFIC_PATH_COMPUTATION_SUCCESS) 
                 else:
-                    #Database.Data.traf_list.update_traf_state(traf.traf_id, TRAFFIC_PATH_COMPUTATION_SUCCESS) 
-                    pc_reply_ev = Custom_event.IntraDomainPathCompReplyEvent()
-                    pc_reply_ev.traf_id = ev.traf_id
-                    pc_reply_ev.result = SUCCESS
-                    self.send_event('Intra_domain_connection_ctrl',pc_reply_ev)
+                    Database.Data.traf_list.update_traf_state(ev.traf_id, TRAFFIC_PATH_COMPUTATION_FAIL)
+                """for path in paths:  
+                    comm_avai_chnl = path[4]
+                    resources = RWA.rsc_allocation(comm_avai_chnl, traf.bw_demand)
+                    routing_path = Database.Intra_domain_path()
+                    routing_path.traf_id = path[0]
+                    routing_path.route_type = path[1]
+                    routing_path.cost = path[2]
+                    routing_path.route = []
+                    for this_node in path[3]:
+                        new_node = Node_for_route()
+                        new_node.node_ip = this_node[0]
+                        new_node.add_port_id = this_node[1]
+                        new_node.add_port_power = 0
+                        new_node.drop_port_id = this_node[2]
+                        new_node.drop_port_power = 0
+                        routing_path.route.append(new_node)
+                    routing_path.chnl = list(path[4])
+                    if (Database.Data.insert_new_lsp(routing_path, resources) == False):
+                        self.logger.info('Insert unprovisioned lsp error!')
+                        result_tmp = FAIL
+                #Database.Data.traf_list.update_traf_state(traf.traf_id, TRAFFIC_PATH_COMPUTATION_SUCCESS) """
+                pc_reply_ev = Custom_event.IntraDomainPathCompReplyEvent()
+                pc_reply_ev.traf_id = ev.traf_id
+                pc_reply_ev.result = result
+                self.send_event('Intra_domain_connection_ctrl',pc_reply_ev)
         elif (ev.prot_type == TRAFFIC_1PLUS1_PROTECTION):
             pass
         else:
@@ -89,41 +141,45 @@ class Path_computation(app_manager.RyuApp):
             self.logger.critical('Can not find traf_id in database! (cross_domain_path_domputation_at_src_domain)')
             return
         if (traf.prot_type == TRAFFIC_NO_PROTECTION or traf.prot_type == TRAFFIC_REROUTING_RESTORATION): 
-            source_node_id = Database.Data.phy_topo.get_node_id_by_ip(traf.src_node_ip)
-            destination_node_id = Database.Data.phy_topo.get_out_node_id(traf.domain_sequence[1])
-            if destination_node_id == None:
+            #source_node_id = Database.Data.phy_topo.get_node_id_by_ip(traf.src_node_ip)
+            #destination_node_id = RWA.find_exit_of_this_domain(traf.domain_sequence[1])
+            sources = list()
+            traf_add_port_id = Database.Data.phy_topo.get_traf_add_port(traf.src_node_ip)
+            if traf_add_port_id == None:
+                self.logger.critical('Cannot find an add port. (Path_computation: _handle_cross_domain_traffic_pc_request)')
+                return
+            common_avai_chnls = Database.Data.phy_topo.get_traf_add_port_resouce(traf.src_node_ip, traf_add_port_id)
+            if common_avai_chnls == None:
+                self.logger.critical('Cannot find an add port. (Path_computation: _handle_cross_domain_traffic_pc_request)')
+                return
+            sources.append([traf.src_node_ip, traf_add_port_id, ROUTE_WORKING, 0, common_avai_chnls])
+            destinations = RWA.find_exit_of_this_domain(traf.domain_sequence[1])
+            if destinations == None:
                 self.logger.critical('Cannot find a interlink. (Path_computation: _handle_cross_domain_traffic_pc_request)')
                 return
-            #path = self.routing(source_node_id, None, destination_node_id, traf.bw_demand)    #routing. calculate one path
-
+            paths = RWA.routing(ev.traf_id, sources, destinations, traf.bw_demand)    #routing. calculate one path
+            
             # from Yiwen
-            src_node_ip = traf.src_node_ip
-            src_port_id = Database.Data.phy_topo.get_port_id(src_node_ip)
-            edge_node_ip = Database.Data.phy_topo.get_edge_node_ip()
-            edge_node_id = Database.Data.phy_topo.get_edge_node_id()
-            self.logger.info ("Begin path computation in source domain from source node {0} to edge node {1}".format(src_node_ip, edge_node_ip))
-            topo = Database.Data.phy_topo.get_topo()
-         
-            nlambda = 3
-            paths = self.routing(str(ev.traf_id), topo, nlambda, src_node_ip, src_port_id, edge_node_ip, traf.bw_dmd)    #routing. calculate one path
+            #src_node_ip = traf.src_node_ip
+            #src_port_id = Database.Data.phy_topo.get_port_id(src_node_ip)
+            #edge_node_ip = Database.Data.phy_topo.get_edge_node_ip()
+            #edge_node_id = Database.Data.phy_topo.get_edge_node_id()
+            #self.logger.info ("Begin path computation in source domain from source node {0} to edge node {1}".format(src_node_ip, edge_node_ip))
+            #topo = Database.Data.phy_topo.get_topo()
+            #nlambda = 3
+            #paths = self.routing(str(ev.traf_id), topo, nlambda, src_node_ip, src_port_id, edge_node_ip, traf.bw_dmd)    #routing. calculate one path
             # from Yiwen end
             
             # tmp routing. for temp use only
-            path = list()
-            #path[0] = ev.traf_id
-            #path[1] = ROUTE_WORKING
-            #path[2] = 0
-            #path[3] = [['192.168.1.1',1,2],['192.168.1.2',1,2],['192.168.1.3'],1,2]
-            #path[4] = [30]
-            path.append(ev.traf_id)
-            path.append(ROUTE_WORKING)
-            path.append(0)
-            path.append([['192.168.1.1',1,2],['192.168.1.2',1,2],['192.168.1.3',1,2]])
-            path.append([15])
-            #Database.Data.intra_domain_path_list.insert_a_new_path(path)
+            #path = list()
+            #path.append(ev.traf_id)
+            #path.append(ROUTE_WORKING)
+            #path.append(0)
+            #path.append([['192.168.1.1',1,2],['192.168.1.2',1,2],['192.168.1.3',1,2]])
+            #path.append([15])
             # tmp routing end
             
-            if (path == []):
+            if (paths == None):
                 #Database.Data.traf_list.update_traf_state(ev.traf_id, TRAFFIC_PATH_COMPUTATION_FAIL)
                 # send pc reply event to Cross_domain_connection_ctrl
                 pc_reply_ev = Custom_event.CrossDomainPathCompReplyEvent()
@@ -131,20 +187,21 @@ class Path_computation(app_manager.RyuApp):
                 pc_reply_ev.result = FAIL
                 self.send_event('Cross_domain_connection_ctrl', pc_reply_ev)
             else:
-                Database.Data.intra_domain_path_list.insert_a_new_path(path)    #record the result of routing
-                #entry_of_next_domain = Database.Data.find_entry_of_next_domain(ev.traf_id)  # find entry of next domain
-                entry_of_next_domain = []
-                cross_domain_pc_ev = Custom_event.EastWest_SendPathCompRequestEvent()
-                cross_domain_pc_ev.traf_id = ev.traf_id
-                cross_domain_pc_ev.route_type = ROUTE_WORKING
-                cross_domain_pc_ev.entry_of_next_domain = entry_of_next_domain
-                self.send_event('EastWest_message_send',cross_domain_pc_ev)
-                #setup a timer for cross-domain path computation. Moved to EastWest_message_send
-                #new_timer = Timer()
-                #new_timer.traf_id = ev.traf_id
-                #new_timer.timer_type = TIMER_PATH_COMPUTATION
-                #new_timer.end_time = time.time() + EASTWEST_WAITING_TIME
-                #eastwest_timer.append(new_timer)
+                for path in paths:                    
+                    Database.Data.intra_domain_path_list.insert_a_new_path(path)    #record the result of routing
+                entry_of_next_domain = RWA.find_entry_of_next_domain(ev.traf_id)  # find entry of next domain
+                #entry_of_next_domain = []
+                if entry_of_next_domain != None:
+                    cross_domain_pc_ev = Custom_event.EastWest_SendPathCompRequestEvent()
+                    cross_domain_pc_ev.traf_id = ev.traf_id
+                    cross_domain_pc_ev.route_type = ROUTE_WORKING
+                    cross_domain_pc_ev.entry_of_next_domain = entry_of_next_domain
+                    self.send_event('EastWest_message_send',cross_domain_pc_ev)
+                else:
+                    pc_reply_ev = Custom_event.CrossDomainPathCompReplyEvent()
+                    pc_reply_ev.traf_id = traf.traf_id
+                    pc_reply_ev.result = FAIL
+                    self.send_event('Cross_domain_connection_ctrl', pc_reply_ev)
         elif (traf.prot_type == TRAFFIC_1PLUS1_PROTECTION):
             pass
         else:
@@ -170,16 +227,95 @@ class Path_computation(app_manager.RyuApp):
         #else:
         #   update traffic state in database (TRAFFIC_PATH_COMPUTATION_FAIL)
         #   send Custom_event.EastWest_SendPathCompReplyEvent to 'EastWest_message_send'
-        # for temp use only
+        
         self.logger.debug('Path_computation module receives EastWest_ReceivePathCompRequestEvent')
         if ev.route_type == ROUTE_REROUTE:
-            Database.Data.traf_list.update_traf_stage(ev.traf_id, TRAFFIC_REROUTING) 
+            Database.Data.traf_list.update_traf_stage(ev.traf_id, TRAFFIC_REROUTING)
+        Database.Data.traf_list.update_traf_state(ev.traf_id, TRAFFIC_PATH_COMPUTATION)
         traf = Database.Data.traf_list.find_traf_by_id(ev.traf_id)
         if traf == None:
             self.logger.critical('Cannot find traffic %d. (Path_computation: _handle_cross_domain_pc_request)' % ev.traf_id)
             return
+        if (traf.prot_type == TRAFFIC_NO_PROTECTION or traf.prot_type == TRAFFIC_REROUTING_RESTORATION): 
+            #source_node_id = Database.Data.phy_topo.get_node_id_by_ip(ev.entry_of_next_domain[0])
+            #destination_node_id = RWA.find_exit_of_this_domain(traf.domain_sequence[1])
+            sources = ev.entry_of_next_domain
+            if Database.Data.controller_list.is_this_domain(traf.domain_sequence[-1]) == False:
+                next_domain_id = Database.Data.traf_list.find_next_domain_id(ev.traf_id, Database.Data.controller_list.this_controller.domain_id)
+                destinations = RWA.find_exit_of_this_domain(next_domain_id)
+                if destinations == None:
+                    self.logger.critical('Cannot find a interlink. (Path_computation: _handle_cross_domain_traffic_pc_request)')
+                    return
+            else:
+                destinations = list()
+                traf_drop_port_id = Database.Data.phy_topo.get_traf_drop_port(traf.dst_node_ip)
+                if traf_drop_port_id == None:
+                    self.logger.critical('Cannot find an drop port. (Path_computation: _handle_cross_domain_pc_request)')
+                    return
+                destinations.append([traf.dst_node_ip, traf_drop_port_id])
+            if ev.route_type == ROUTE_REROUTE:
+                paths = RWA.rerouting(ev.traf_id, sources, destinations, traf.bw_dmd)
+            else:
+                paths = RWA.routing(ev.traf_id, sources, destinations, traf.bw_dmd)
+            if paths == None:
+                Database.Data.traf_list.update_traf_state(ev.traf_id, TRAFFIC_PATH_COMPUTATION_FAIL)
+                ew_pc_reply = Custom_event.EastWest_SendPathCompReplyEvent()
+                ew_pc_reply.traf_id = ev.traf_id
+                ew_pc_reply.route_type = ev.route_type
+                ew_pc_reply.result = FAIL
+                #ew_pc_reply.resource_allocation = []
+                ew_pc_reply.exit_of_previous_domain = None
+                self.send_event('EastWest_message_send', ew_pc_reply)
+            else:
+                for path in paths:
+                    Database.Data.intra_domain_path_list.insert_a_new_path(path)    #record the result of routing
+                if Database.Data.controller_list.is_this_domain(traf.domain_sequence[-1]) == False:
+                    entry_of_next_domain = RWA.find_entry_of_next_domain(ev.traf_id)  # find entry of next domain
+                    cross_domain_pc_ev = Custom_event.EastWest_SendPathCompRequestEvent()
+                    cross_domain_pc_ev.traf_id = ev.traf_id
+                    cross_domain_pc_ev.route_type = ev.route_type
+                    cross_domain_pc_ev.entry_of_next_domain = entry_of_next_domain
+                    self.send_event('EastWest_message_send',cross_domain_pc_ev)
+                else:
+                    resources = RWA.rsc_allocation(ev.traf_id, traf.bw_dmd)
+                    result = SUCCESS
+                    exit_of_previous_domain = list()
+                    for path_item in resources:
+                        new_path = Database.Data.intra_domain_path_list.find_a_path_by_id(path_item[0])
+                        if new_path == None:
+                            self.logger.critical('Cannot intra-domain path for traffic %d.' % ev.traf_id)
+                            result = FAIL
+                            break
+                        Database.Data.insert_new_lsp(new_path, path_item[1])
+                        exit_node_port_tmp = Database.Data.phy_topo.get_exit_of_previous_domain(new_path.route[0].node_ip, new_path.route[0].add_port_id)
+                        if exit_node_port_tmp == None:
+                            self.logger.critical('Can not find inter-domain link. (Path_computation: _handle_cross_domain_pc_request)')
+                            result = FAIL
+                            break
+                        exit_tmp = [exit_node_port_tmp[0], exit_node_port_tmp[1], new_path.route_type, path_item[1]]
+                        exit_of_previous_domain.append(exit_tmp)
+                    Database.Data.intra_domain_path_list.pop_paths(ev.traf_id)
+                    if result == SUCCESS:
+                        Database.Data.traf_list.update_traf_state(ev.traf_id, TRAFFIC_PATH_COMPUTATION_SUCCESS) 
+                    else:
+                        Database.Data.traf_list.update_traf_state(ev.traf_id, TRAFFIC_PATH_COMPUTATION_FAIL)
+                    pc_reply_ev = Custom_event.EastWest_SendPathCompReplyEvent()
+                    pc_reply_ev.traf_id = ev.traf_id
+                    pc_reply_ev.route_type = ev.route_type
+                    pc_reply_ev.result = result
+                    #pc_reply_ev.resource_allocation = list(resources)
+                    if result == SUCCESS:
+                        pc_reply_ev.exit_of_previous_domain = exit_of_previous_domain
+                    else:
+                        pc_reply_ev.exit_of_previous_domain = None
+                    self.send_event('EastWest_message_send', pc_reply_ev)
+        elif (traf.prot_type == TRAFFIC_1PLUS1_PROTECTION):
+            pass
+        else:
+            self.logger.info('Protection type error! Protection type = %d' % ev.prot_type)
+        
 
-        tmp_time = time.time()
+        '''tmp_time = time.time()
         # from Yiwen
         if (traf.prot_type == TRAFFIC_1PLUS1_PROTECTION):
            pass
@@ -235,19 +371,14 @@ class Path_computation(app_manager.RyuApp):
                     #chosen_path = [path[0], path[1], path[2], path[3][index_of_lowest_wavelength], path[4][0]]
                     #self.logger.info("Chosen path: {0}".format(', '.join(map(str, chosen_path))))
                     #Database.Data.intra_domain_path_list.insert_a_new_path(chosen_path)    #record the result of routing
-        # from Yiwen end'''
-        self.logger.info('Testing! Path computation time = %s' % str(time.time() - tmp_time))
+        # from Yiwen end
+        self.logger.info('Testing! Path computation time = %s' % str(time.time() - tmp_time))'''
 
         #for temp use only
-        if Database.Data.controller_list.is_this_domain(traf.domain_sequence[0]) != True:
+        '''if Database.Data.controller_list.is_this_domain(traf.domain_sequence[0]) != True:
             path = list()
             resources = None
             if ev.route_type == ROUTE_WORKING:
-                #path[0] = ev.traf_id
-                #path[1] = ev.route_type
-                #path[2] = 0
-                #path[3] = [['192.168.2.1',1,2],['192.168.2.3',1,3]]
-                #path[4] = [30]
                 path.append(ev.traf_id)
                 path.append(ev.route_type)
                 path.append(0)
@@ -256,16 +387,10 @@ class Path_computation(app_manager.RyuApp):
                 Database.Data.intra_domain_path_list.insert_a_new_path(path)
                 resources = [15]
             elif ev.route_type == ROUTE_REROUTE:
-                #path[0] = ev.traf_id
-                #path[1] = ev.route_type
-                #path[2] = 0
-                #path[3] = [['192.168.2.1',1,3],['192.168.2.2',1,2],['192.168.2.3',2,3]]
-                #path[4] = [60]
                 path.append(ev.traf_id)
                 path.append(ev.route_type)
                 path.append(0)
                 path.append([['192.168.2.1',1,2],['192.168.2.3',1,3]])
-                #path.append([['192.168.2.1',1,3],['192.168.2.2',1,2],['192.168.2.3',2,3]])
                 path.append([30])
                 Database.Data.intra_domain_path_list.insert_a_new_path(path)
                 resources = [30]
@@ -286,7 +411,7 @@ class Path_computation(app_manager.RyuApp):
             self.send_event('EastWest_message_send', pc_reply_ev)
         else:
             self.logger,info('Error! This domain is the source domain. (Path_computation: _handle_cross_domain_pc_request)')
-        # for temp use only end
+        # for temp use only end'''
         
                 
      
@@ -309,39 +434,102 @@ class Path_computation(app_manager.RyuApp):
         #       send Custom_event.CrossDomainReroutingReplyEvent to 'Cross_domain_connection_ctrl'
         #   else:
         #       send Custom_event.CrossDomainPathCompReplyEvent to 'Cross_domain_connection_ctrl'
-        # for tmp use onlys
-        self.logger.debug('Path_computation module receives EastWest_ReceivePathCompReplyEvent')
-        if ev.result == SUCCESS:
-            traf = Database.Data.traf_list.find_traf_by_id(ev.traf_id)
-            path = Database.Data.intra_domain_path_list.find_a_path(ev.traf_id, ev.route_type)
-            if path == None:
-                self.logger.critical('Cannot intra-domain path for traffic %d.' % ev.traf_id)
-                return
-            Database.Data.insert_new_lsp(path, ev.resource_allocation)
-            Database.Data.intra_domain_path_list.pop_a_path(ev.traf_id, ev.route_type)
-            Database.Data.traf_list.update_traf_state(ev.traf_id, TRAFFIC_PATH_COMPUTATION_SUCCESS) 
-            if Database.Data.controller_list.is_this_domain(traf.domain_sequence[0]) != True:
-                pc_reply_ev = Custom_event.EastWest_SendPathCompReplyEvent()
-                pc_reply_ev.traf_id = ev.traf_id
-                pc_reply_ev.route_type = ev.route_type
-                pc_reply_ev.result = SUCCESS
-                pc_reply_ev.resource_allocation = list(ev.resource_allocation)
-                self.send_event('EastWest_message_send', pc_reply_ev)
-            else:
-                if ev.route_type == ROUTE_REROUTE:
-                    rerouing_reply_ev = Custom_event.CrossDomainReroutingReplyEvent()
-                    rerouing_reply_ev.traf_id = ev.traf_id
-                    rerouing_reply_ev.result = SUCCESS
-                    self.send_event('Cross_domain_connection_ctrl', rerouing_reply_ev)
-                else:
-                    pc_reply_ev = Custom_event.CrossDomainPathCompReplyEvent()
+        traf = Database.Data.traf_list.find_traf_by_id(ev.traf_id)
+        if traf == None:
+            self.logger.critical('Cannot find traffic %d. (Path_computation: _handle_cross_domain_pc_reply)' % ev.traf_id)
+            return
+        if (traf.prot_type == TRAFFIC_NO_PROTECTION or traf.prot_type == TRAFFIC_REROUTING_RESTORATION): 
+            self.logger.debug('Path_computation module receives EastWest_ReceivePathCompReplyEvent')
+            if ev.result == SUCCESS:
+                #path = Database.Data.intra_domain_path_list.find_a_path(ev.traf_id, ev.route_type)
+                paths = RWA.find_intra_domain_paths(ev.exit_of_this_domain)
+                if paths == None:
+                    self.logger.critical('Cannot find intra-domain path for traffic %d.' % ev.traf_id)
+                    return
+                #Database.Data.insert_new_lsp(path, ev.resource_allocation)
+                #Database.Data.intra_domain_path_list.pop_a_path(ev.traf_id, ev.route_type)
+                #Database.Data.traf_list.update_traf_state(ev.traf_id, TRAFFIC_PATH_COMPUTATION_SUCCESS) 
+                if Database.Data.controller_list.is_this_domain(traf.domain_sequence[0]) != True:
+                    result = SUCCESS
+                    exit_of_previous_domain = list()
+                    for path_item in paths:
+                        new_path = Database.Data.intra_domain_path_list.find_a_path_by_id(path_item[0])
+                        if new_path == None:
+                            self.logger.critical('Cannot intra-domain path for traffic %d.' % ev.traf_id)
+                            result = FAIL
+                            break
+                        Database.Data.insert_new_lsp(new_path, path_item[1])
+                        exit_node_port_tmp = Database.Data.phy_topo.get_exit_of_previous_domain(new_path.route[0].node_ip, new_path.route[0].add_port_id)
+                        if exit_node_port_tmp == None:
+                            self.logger.critical('Can not find inter-domain link. (Path_computation: _handle_cross_domain_pc_request)')
+                            result = FAIL
+                            break
+                        exit_tmp = [exit_node_port_tmp[0], exit_node_port_tmp[1], new_path.route_type, path_item[1]]
+                        exit_of_previous_domain.append(exit_tmp)
+                    Database.Data.intra_domain_path_list.pop_paths(ev.traf_id)
+                    if result == SUCCESS:
+                        Database.Data.traf_list.update_traf_state(ev.traf_id, TRAFFIC_PATH_COMPUTATION_SUCCESS) 
+                    else:
+                        Database.Data.traf_list.update_traf_state(ev.traf_id, TRAFFIC_PATH_COMPUTATION_FAIL)
+                    pc_reply_ev = Custom_event.EastWest_SendPathCompReplyEvent()
                     pc_reply_ev.traf_id = ev.traf_id
-                    pc_reply_ev.result = SUCCESS
-                    self.send_event('Cross_domain_connection_ctrl', pc_reply_ev)
-        elif ev.result == FAIL: #need to be completed 
-            self.logger.info('EastWest_ReceivePathCompReplyEvent result == FAIL')
-        else:   #need to be completed 
-            self.logger.info('EastWest_ReceivePathCompReplyEvent result == TIMEOUT')
+                    pc_reply_ev.route_type = ev.route_type
+                    pc_reply_ev.result = result
+                    if result == SUCCESS:
+                        pc_reply_ev.exit_of_previous_domain = exit_of_previous_domain
+                    else:
+                        pc_reply_ev.exit_of_previous_domain = None
+                    self.send_event('EastWest_message_send', pc_reply_ev)
+                else:
+                    result = SUCCESS
+                    for path_item in paths:
+                        new_path = Database.Data.intra_domain_path_list.find_a_path_by_id(path_item[0])
+                        if new_path == None:
+                            self.logger.critical('Cannot intra-domain path for traffic %d.' % ev.traf_id)
+                            result = FAIL
+                            break
+                        Database.Data.insert_new_lsp(new_path, path_item[1])
+                    Database.Data.intra_domain_path_list.pop_paths(ev.traf_id)
+                    if result == SUCCESS:
+                        Database.Data.traf_list.update_traf_state(ev.traf_id, TRAFFIC_PATH_COMPUTATION_SUCCESS) 
+                    else:
+                        Database.Data.traf_list.update_traf_state(ev.traf_id, TRAFFIC_PATH_COMPUTATION_FAIL)
+                    if ev.route_type == ROUTE_REROUTE:
+                        rerouing_reply_ev = Custom_event.CrossDomainReroutingReplyEvent()
+                        rerouing_reply_ev.traf_id = ev.traf_id
+                        rerouing_reply_ev.result = result
+                        self.send_event('Cross_domain_connection_ctrl', rerouing_reply_ev)
+                    else:
+                        pc_reply_ev = Custom_event.CrossDomainPathCompReplyEvent()
+                        pc_reply_ev.traf_id = ev.traf_id
+                        pc_reply_ev.result = result
+                        self.send_event('Cross_domain_connection_ctrl', pc_reply_ev)
+            else:   #FAIL or TIMEOUT
+                self.logger.info('EastWest_ReceivePathCompReplyEvent result == FAIL or TIMEOUT')
+                Database.Data.traf_list.update_traf_state(ev.traf_id, TRAFFIC_PATH_COMPUTATION_FAIL) 
+                Database.Data.intra_domain_path_list.pop_paths(ev.traf_id)
+                if Database.Data.controller_list.is_this_domain(traf.domain_sequence[0]) != True:
+                    pc_reply_ev = Custom_event.EastWest_SendPathCompReplyEvent()
+                    pc_reply_ev.traf_id = ev.traf_id
+                    pc_reply_ev.route_type = ev.route_type
+                    pc_reply_ev.result = ev.result
+                    pc_reply_ev.exit_of_previous_domain = None
+                    self.send_event('EastWest_message_send', pc_reply_ev)
+                else:
+                    if ev.route_type == ROUTE_REROUTE:
+                        rerouing_reply_ev = Custom_event.CrossDomainReroutingReplyEvent()
+                        rerouing_reply_ev.traf_id = ev.traf_id
+                        rerouing_reply_ev.result = ev.result
+                        self.send_event('Cross_domain_connection_ctrl', rerouing_reply_ev)
+                    else:
+                        pc_reply_ev = Custom_event.CrossDomainPathCompReplyEvent()
+                        pc_reply_ev.traf_id = ev.traf_id
+                        pc_reply_ev.result = ev.result
+                        self.send_event('Cross_domain_connection_ctrl', pc_reply_ev) 
+        elif (traf.prot_type == TRAFFIC_1PLUS1_PROTECTION):
+            pass
+        else:
+            self.logger.info('Protection type error! Protection type = %d' % ev.prot_type)
             
 
     @set_ev_cls(Custom_event.IntraDomainReroutingRequest)
@@ -357,12 +545,75 @@ class Path_computation(app_manager.RyuApp):
         #else:
         #   error
         self.logger.debug('Path_computation module receives IntraDomainReroutingRequest')
+        Database.Data.traf_list.update_traf_stage(ev.traf_id, TRAFFIC_REROUTING)
+        Database.Data.traf_list.update_traf_state(ev.traf_id, TRAFFIC_INTRA_DOMAIN_REROUTE)
         traf = Database.Data.traf_list.find_traf_by_id(ev.traf_id)
         if traf == None:
             self.logger.critcal('Cannot find traffic %d. (Path_computation: _handle_intra_domain_rerouting_request)' % ev.traf_id)
             return
+        if traf.prot_type != TRAFFIC_REROUTING_RESTORATION:
+            self.logger.critcal('Wrong protection type. (Path_computation: _handle_intra_domain_rerouting_request)')
+            return
+        for this_lsp in Database.Data.lsp_list.lsp_list:
+            if this_lsp.traf_id == ev.traf_id and this_lsp.route_type == ROUTE_WORKING:
+                #source_node_id = Database.Data.phy_topo.get_node_id_by_ip(this_lsp.explicit_route.route[0].node_ip)
+                #destination_node_id = Database.Data.phy_topo.get_node_id_by_ip(this_lsp.explicit_route.route[-1].node_ip)
+                sources = list()
+                if traf.traf_type == TRAFFIC_INTRA_DOMAIN:
+                    common_avai_chnls = Database.Data.phy_topo.get_traf_add_port_resouce(this_lsp.explicit_route.route[0].node_ip, this_lsp.explicit_route.route[0].add_port_id)
+                elif traf.traf_type == TRAFFIC_CROSS_DOMAIN:
+                    common_avai_chnls = list(this_lsp.occ_chnl)
+                else:
+                    self.logger.info('Invalid traffic type! (Path_computation: _handle_intra_domain_rerouting_request)')
+                if common_avai_chnls == None:
+                    self.logger.critical('Cannot find an add port. (Path_computation: _handle_intra_domain_rerouting_request)')
+                    return
+                sources.append([this_lsp.explicit_route.route[0].node_ip, this_lsp.explicit_route.route[0].add_port_id, ROUTE_INTRA_REROUTE, 0, common_avai_chnls])
+                destinations = list()
+                destinations.append([this_lsp.explicit_route.route[-1].node_ip, this_lsp.explicit_route.route[-1].drop_port_id])
+                paths = RWA.rerouting(ev.traf_id, sources, destinations, traf.bw_demand)
+                if paths == None:
+                    reroute_reply_ev = Custom_event.IntraDomainReroutingReply()
+                    reroute_reply_ev.traf_id = ev.traf_id
+                    reroute_reply_ev.result = FAIL
+                    if traf.traf_type == TRAFFIC_INTRA_DOMAIN:
+                        self.send_event('Intra_domain_connection_ctrl', reroute_reply_ev)
+                    elif traf.traf_type == TRAFFIC_CROSS_DOMAIN:
+                        self.send_event('Cross_domain_connection_ctrl', reroute_reply_ev)
+                    else:
+                        self.logger.info('Invalid traffic type! (Path_computation: _handle_intra_domain_rerouting_request)')
+                else:
+                    result = SUCCESS
+                    for path in paths:
+                        Database.Data.intra_domain_path_list.insert_a_new_path(path)    #record the result of routing
+                    resources = RWA.rsc_allocation(ev.traf_id, traf.bw_dmd)
+                    for path_item in resources:
+                        new_path = Database.Data.intra_domain_path_list.find_a_path_by_id(path_item[0])
+                        if new_path == None:
+                            self.logger.critical('Cannot intra-domain path for traffic %d.' % ev.traf_id)
+                            result = FAIL
+                            break
+                        if new_path.route_type == ROUTE_INTRA_REROUTE:
+                            Database.Data.insert_new_lsp(new_path, path_item[1])
+                        else:
+                            self.logger.critical('Wrong route type. (Path_computation: _handle_intra_domain_rerouting_request)')
+                            return
+                    Database.Data.intra_domain_path_list.pop_paths(ev.traf_id)
+                    if result == SUCCESS:
+                        Database.Data.traf_list.update_traf_state(ev.traf_id, TRAFFIC_INTRA_DOMAIN_REROUTE_SUCCESS) 
+                    else:
+                        Database.Data.traf_list.update_traf_state(ev.traf_id, TRAFFIC_INTRA_DOMAIN_REROUTE_FAIL)
+                    reroute_reply_ev = Custom_event.IntraDomainReroutingReply()
+                    reroute_reply_ev.traf_id = ev.traf_id
+                    reroute_reply_ev.result = result
+                    if traf.traf_type == TRAFFIC_INTRA_DOMAIN:
+                        self.send_event('Intra_domain_connection_ctrl', reroute_reply_ev)
+                    elif traf.traf_type == TRAFFIC_CROSS_DOMAIN:
+                        self.send_event('Cross_domain_connection_ctrl', reroute_reply_ev)
+                    else:
+                        self.logger.info('Invalid traffic type! (Path_computation: _handle_intra_domain_rerouting_request)')
 
-        # from Yiwen
+        '''# from Yiwen
         if Database.Data.controller_list.is_this_domain(traf.domain_sequence[0]) == True:
             src_node_ip = traf.src_node_ip
             src_port_id = Database.Data.phy_topo.get_port_id(src_node_ip)
@@ -380,15 +631,10 @@ class Path_computation(app_manager.RyuApp):
             paths = self.routing(str(ev.traf_id), topo, nlambda, src_node_ip, src_port_id, edge_node_ip, traf.bw_dmd)    #routing. calculate one path
         # from Yiwen end'''
 
-        path = list()
+        '''path = list()
         if Database.Data.controller_list.is_this_domain(traf.domain_sequence[0]) == True:
             path = []
         else:
-            #path[0] = ev.traf_id
-            #path[1] = ROUTE_INTRA_REROUTE
-            #path[2] = 0
-            #path[3] = [['192.168.2.1',1,3],['192.168.2.2',1,2],['192.168.2.3',2,3]]
-            #path[4] = [30]
             path.append(ev.traf_id)
             path.append(ROUTE_INTRA_REROUTE)
             path.append(0)
@@ -410,7 +656,7 @@ class Path_computation(app_manager.RyuApp):
         elif traf.traf_type == TRAFFIC_CROSS_DOMAIN:
             self.send_event('Cross_domain_connection_ctrl', rerouting_reply_ev)
         else:
-            self.logger.info('Invalid traffic type! (Path_computation: _handle_intra_domain_rerouting_request)')
+            self.logger.info('Invalid traffic type! (Path_computation: _handle_intra_domain_rerouting_request)')'''
             
         
     @set_ev_cls(Custom_event.CrossDomainReroutingRequestEvent)
@@ -424,21 +670,55 @@ class Path_computation(app_manager.RyuApp):
         #else:
         #   update traffic state to TRAFFIC_PATH_COMPUTATION_FAIL
         #   send Custom_event.CrossDomainReroutingReplyEvent to 'Cross_domain_connection_ctrl'
-
-        # from Yiwen
+        Database.Data.traf_list.update_traf_stage(ev.traf_id, TRAFFIC_REROUTING)
+        Database.Data.traf_list.update_traf_state(ev.traf_id, TRAFFIC_PATH_COMPUTATION)
         traf = Database.Data.traf_list.find_traf_by_id(ev.traf_id)
         if (traf == None):
-            self.logger.critical('Can not find traf_id in database! (cross_domain_path_domputation_at_src_domain)')
+            self.logger.critical('Can not find traf_id in database! (cross_domain_reroute_at_src_domain)')
             return
-        if (traf.prot_type == TRAFFIC_NO_PROTECTION or traf.prot_type == TRAFFIC_REROUTING_RESTORATION): 
-            source_node_id = Database.Data.phy_topo.get_node_id_by_ip(traf.src_node_ip)
-            destination_node_id = Database.Data.phy_topo.get_out_node_id(traf.domain_sequence[1])
+        if traf.prot_type != TRAFFIC_REROUTING_RESTORATION:
+            self.logger.critcal('Wrong protection type. (Path_computation: _handle_intra_domain_rerouting_request)')
+            return
+ 
+        sources = list()
+        traf_add_port_id = Database.Data.phy_topo.get_traf_add_port(traf.src_node_ip)
+        if traf_add_port_id == None:
+            self.logger.critical('Cannot find an add port. (Path_computation: _handle_cross_domain_traffic_pc_request)')
+            return
+        common_avai_chnls = Database.Data.phy_topo.get_traf_add_port_resouce(traf.src_node_ip, traf_add_port_id)
+        if common_avai_chnls == None:
+            self.logger.critical('Cannot find an add port. (Path_computation: _handle_cross_domain_traffic_pc_request)')
+            return
+        sources.append([traf.src_node_ip, traf_add_port_id, ROUTE_WORKING, 0, common_avai_chnls])
+        destinations = RWA.find_exit_of_this_domain(traf.domain_sequence[1])
+        if destinations == None:
+            self.logger.critical('Cannot find a interlink. (Path_computation: _handle_cross_domain_traffic_pc_request)')
+            return
+        paths = RWA.rerouting(ev.traf_id, sources, destinations, traf.bw_demand)    #routing. calculate one path
 
-            if destination_node_id == None:
-                self.logger.critical('Cannot find a interlink. (Path_computation: _handle_cross_domain_traffic_pc_request)')
-                return
-            #path = self.routing(source_node_id, None, destination_node_id, traf.bw_demand)    #routing. calculate one path
-
+        if paths == None:
+            # send pc reply event to Cross_domain_connection_ctrl
+            pc_reply_ev = Custom_event.CrossDomainReroutingReplyEvent()
+            pc_reply_ev.traf_id = traf.traf_id
+            pc_reply_ev.result = FAIL
+            self.send_event('Cross_domain_connection_ctrl', pc_reply_ev)
+        else:
+            for path in paths:                    
+                Database.Data.intra_domain_path_list.insert_a_new_path(path)    #record the result of routing
+            entry_of_next_domain = RWA.find_entry_of_next_domain(ev.traf_id)  # find entry of next domain
+            if entry_of_next_domain != None:
+                cross_domain_pc_ev = Custom_event.EastWest_SendPathCompRequestEvent()
+                cross_domain_pc_ev.traf_id = ev.traf_id
+                cross_domain_pc_ev.route_type = ROUTE_REROUTE
+                cross_domain_pc_ev.entry_of_next_domain = entry_of_next_domain
+                self.send_event('EastWest_message_send',cross_domain_pc_ev)
+            else:
+                pc_reply_ev = Custom_event.CrossDomainReroutingReplyEvent()
+                pc_reply_ev.traf_id = traf.traf_id
+                pc_reply_ev.result = FAIL
+                self.send_event('Cross_domain_connection_ctrl', pc_reply_ev)
+                
+            '''# from Yiwen
             src_node_ip = traf.src_node_ip
             src_port_id = Database.Data.phy_topo.get_port_id(src_node_ip)
             edge_node_ip = Database.Data.phy_topo.get_edge_node_ip()
@@ -448,15 +728,10 @@ class Path_computation(app_manager.RyuApp):
            
             nlambda = 3
             paths = self.routing(str(ev.traf_id), topo, nlambda, src_node_ip, src_port_id, edge_node_ip, traf.bw_dmd)    #routing. calculate one path
-        # from Yiwen end'''
+            # from Yiwen end'''
 
-        Database.Data.traf_list.update_traf_stage(ev.traf_id, TRAFFIC_REROUTING)
+        '''Database.Data.traf_list.update_traf_stage(ev.traf_id, TRAFFIC_REROUTING)
         path = list()
-        #path[0] = ev.traf_id
-        #path[1] = ROUTE_REROUTE
-        #path[2] = 0
-        #path[3] = [['192.168.1.1',1,2],['192.168.1.2',1,2],['192.168.1.3'],1,2]
-        #path[4] = [60]
         path.append(ev.traf_id)
         path.append(ROUTE_REROUTE)
         path.append(0)
@@ -483,7 +758,8 @@ class Path_computation(app_manager.RyuApp):
             rerouing_replt_ev = Custom_event.CrossDomainReroutingReplyEvent()
             rerouing_replt_ev.traf_id = ev.traf_id
             rerouing_replt_ev.result = FAIL
-            self.send_event('Cross_domain_connection_ctrl', rerouing_replt_ev)
+            self.send_event('Cross_domain_connection_ctrl', rerouing_replt_ev)'''
+            
     
         
         
@@ -493,7 +769,8 @@ class Path_computation(app_manager.RyuApp):
         """
         #pass
 
-    def routing(self, traf_id, topo, nlambda, src_node_ip, src_port_id, edge_node_ip, bw_demand):
+    #from Yiwen   modified by Yao 2017-05-03
+    def routing_yiwen(self, traf_id, topo, nlambda, src_node_ip, src_port_id, edge_node_ip, bw_demand):
         """input: src_node_id, src_port_id, dst_node_id, bw_demand
            output: [traf_id, route_type, cost, route(a list of node_id), common_avai_chnl]. if fail, return []
         """
@@ -513,12 +790,14 @@ class Path_computation(app_manager.RyuApp):
         
 
         return [traf_id, ROUTE_WORKING, 0, routes, wavelengths]
-    
-    def rsc_allocation(self, comm_avai_chnl, bw_demand):
+    #from Yiwen end
+        
+
+    #def rsc_allocation(self, comm_avai_chnl, bw_demand):
         """input: comm_avai_chnl(a list), bw_demand
            output: resources (a list)
         """
-        pass
+        #pass
         #return a_list
     
         
