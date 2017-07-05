@@ -1,12 +1,11 @@
 """
 Generate events after receiving north-bound messages 
 
-Author:   Yao Li (yaoli@optics.arizona.edu)
-          Jiakai Yu (jiakaiyu@email.arizona.edu)
-Created:  2017/04/30
-Version:  2.0
+Author:   Yao Li (yaoli@optics.arizona.edu.cn)
+Created:  2017/01/16
+Version:  1.0
 
-Last modified by Yao: 2017/04/30
+Last modified by Yao: 2017/01/20
 
 """
 
@@ -128,14 +127,6 @@ class North_bound_message_receive(ControllerBase):#app_manager.RyuApp):
                 elif request_class == 'CorssDomainRequest_rev':
                     traffic_request.domain_sequence = [2, 1]
                 RESTAPIobj.send_event('Cross_domain_connection_ctrl', traffic_request)
-                
-                # added by Yao
-                new_timer = Database.Timer()    
-                new_timer.traf_id = traffic_request.traf_id
-                new_timer.timer_type = TIMER_TRAFFIC_SETUP
-                new_timer.end_time = time.time() + NORTH_WAITING_TIME
-                north_timer.append(new_timer)
-                # added by Yao end 
 
                 status_return = {'Result':'CorssDomainRequest Received',
                                  'Traf_ID': traffic_request.traf_id,
@@ -183,15 +174,6 @@ class North_bound_message_receive(ControllerBase):#app_manager.RyuApp):
                 if request_class == 'IntraDomainRequest_rev':
                     traffic_request.domain_sequence = [2, 2]
                 RESTAPIobj.send_event('Intra_domain_connection_ctrl', traffic_request)
-                
-                # added by Yao
-                new_timer = Database.Timer()    
-                new_timer.traf_id = traffic_request.traf_id
-                new_timer.timer_type = TIMER_TRAFFIC_SETUP
-                new_timer.end_time = time.time() + NORTH_WAITING_TIME
-                north_timer.append(new_timer)
-                # added by Yao end
-                
                 status_return = {'Result':'IntraDomainRequest Received',
                                  'Traf_ID': traffic_request.traf_id,
                                  'Source_Node':traffic_request.src_node_ip,
@@ -216,15 +198,6 @@ class North_bound_message_receive(ControllerBase):#app_manager.RyuApp):
             elif request_class == 'IntraDomainTearDown':
                 traffic_request = Custom_event.North_IntraDomainTrafficTeardownRequestEvent()
                 traffic_request.traf_id = decoded['TearTraf']
-                
-                # added by Yao
-                new_timer = Database.Timer()    
-                new_timer.traf_id = traffic_request.traf_id
-                new_timer.timer_type = TIMER_TRAFFIC_TEARDOWN
-                new_timer.end_time = time.time() + NORTH_WAITING_TIME
-                north_timer.append(new_timer)
-                # added by Yao end
-                
                 status_return = {'Result':'IntraDomainTearDown Received',
                                  'TearTraf' : traffic_request.traf_id,
                                 }
@@ -237,15 +210,6 @@ class North_bound_message_receive(ControllerBase):#app_manager.RyuApp):
             elif request_class == 'CrossDomainTearDown':
                 traffic_request = Custom_event.North_CrossDomainTrafficTeardownRequestEvent()
                 traffic_request.traf_id = decoded['TearTraf']
-                
-                # added by Yao
-                new_timer = Database.Timer()    
-                new_timer.traf_id = traffic_request.traf_id
-                new_timer.timer_type = TIMER_TRAFFIC_TEARDOWN
-                new_timer.end_time = time.time() + NORTH_WAITING_TIME
-                north_timer.append(new_timer)
-                # added by Yao end
-                
                 status_return = {'Result':'CrossDomainTearDown Received',
                                  'TearTraf' : traffic_request.traf_id,
                                 }

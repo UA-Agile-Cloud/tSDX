@@ -1,7 +1,7 @@
 """
 Handle physical layer monitoring
 
-Author:   Yao Li (yaoli@optics.arizona.edu)
+Author:   Yao Li (yaoli@optics.arizona.edu.cn)
 Created:  2017/01/09
 Version:  1.0
 
@@ -44,111 +44,111 @@ class Monitoring(app_manager.RyuApp):
         new_timer.traf_id = ev.traf_id
         new_timer.timer_type = TIMER_OSNR_MONITORING
         new_timer.end_time = time.time() + SOUTH_WAITING_TIME
-        Database.Data.south_timer.append(new_timer)
-        self.logger.debug('ev.traf_id = %d' % ev.traf_id)
-        self.logger.debug('ev.route_type = %d' % ev.route_type)
+	Database.Data.south_timer.append(new_timer)
+	self.logger.debug('ev.traf_id = %d' % ev.traf_id)
+	self.logger.debug('ev.route_type = %d' % ev.route_type)
         for this_lsp in Database.Data.lsp_list.lsp_list:
             if this_lsp.traf_id == ev.traf_id and this_lsp.route_type == ev.route_type:
                 new_msgs = Database.LSP_msg_list()
                 new_msgs.lsp_id = this_lsp.lsp_id
                 new_msgs.route_type = this_lsp.route_type
-        new_timer.lsp_msg_list.append(new_msgs)
-        Database.Data.message_id += 1
-        new_msgs.msgs[0] = Database.Data.message_id
-        Database.Data.message_id += 1
-        new_msgs.msgs[1] = Database.Data.message_id
-        #for resording excution time
-        if Database.Data.south_osnr_monitor_time == 0:      
-            Database.Data.south_osnr_monitor_time = time.time()
-        else:
-            self.logger.critical('south_osnr_monitor_time error! \n')
-        #for resording excution time end
-        new_node = this_lsp.explicit_route.route[0]
-        if new_node != None:
-            dpid = DPID
-            datapath = Database.Data.ip2datapath[new_node.node_ip]
-            msg_id = new_msgs.msgs[0]
-            mod = datapath.ofproto_parser.OFPTGetOSNRRequest(datapath,
-                                                            datapath_id=dpid,
-                                                            message_id= msg_id,
-                                                            ITU_standards= ITU_C_50, 
-                                                            node_id= Database.Data.phy_topo.get_node_id_by_ip(new_node.node_ip),
-                                                            port_id= new_node.add_port_id, 
-                                                            start_channel= this_lsp.occ_chnl[0],
-                                                            end_channel= this_lsp.occ_chnl[-1],
-                                                            experiment1=0,
-                                                            experiment2=0)
-            datapath.send_msg(mod)
-            self.logger.info('a OSNR monitor request is sent by RYU. (Monitoring: _handle_OSNR_monitoring_request)') 
-            self.logger.debug('msg_id = %d'% msg_id)
-            self.logger.debug('node_id = %d' % Database.Data.phy_topo.get_node_id_by_ip(new_node.node_ip))
-            self.logger.debug('port_id = %d' % new_node.add_port_id)
-            hub.sleep(0.05)
-            #new_msgs.msgs.append(Database.Data.message_id)
-        new_node = this_lsp.explicit_route.route[-1]
-        if new_node != None:
-            dpid = DPID
-            datapath = Database.Data.ip2datapath[new_node.node_ip]
-            msg_id = new_msgs.msgs[1]
-            mod = datapath.ofproto_parser.OFPTGetOSNRRequest(datapath,
-                                                            datapath_id=dpid,
-                                                            message_id= msg_id,
-                                                            ITU_standards= ITU_C_50, 
-                                                            node_id= Database.Data.phy_topo.get_node_id_by_ip(new_node.node_ip),
-                                                            port_id= new_node.drop_port_id, 
-                                                            start_channel= this_lsp.occ_chnl[0],
-                                                            end_channel= this_lsp.occ_chnl[-1],
-                                                            experiment1=0,
-                                                            experiment2=0)
-            datapath.send_msg(mod)
-            self.logger.info('a OSNR monitor request is sent by RYU. (Monitoring: _handle_OSNR_monitoring_request)') 
-            self.logger.debug('msg_id = %d'% msg_id)
-            self.logger.debug('node_id = %d' % Database.Data.phy_topo.get_node_id_by_ip(new_node.node_ip))
-            self.logger.debug('port_id = %d' % new_node.drop_port_id)
-            #new_msgs.msgs.append(Database.Data.message_id)
+		new_timer.lsp_msg_list.append(new_msgs)
+		Database.Data.message_id += 1
+		new_msgs.msgs[0] = Database.Data.message_id
+		Database.Data.message_id += 1
+		new_msgs.msgs[1] = Database.Data.message_id
+		#for resording excution time
+		if Database.Data.south_osnr_monitor_time == 0:		
+		    Database.Data.south_osnr_monitor_time = time.time()
+		else:
+		    self.logger.critical('south_osnr_monitor_time error! \n')
+		#for resording excution time end
+                new_node = this_lsp.explicit_route.route[0]
+                if new_node != None:
+                    dpid = DPID
+                    datapath = Database.Data.ip2datapath[new_node.node_ip]
+		    msg_id = new_msgs.msgs[0]
+                    mod = datapath.ofproto_parser.OFPTGetOSNRRequest(datapath,
+                                                                    datapath_id=dpid,
+                                                                    message_id= msg_id,
+                                                                    ITU_standards= ITU_C_50, 
+                                                                    node_id= Database.Data.phy_topo.get_node_id_by_ip(new_node.node_ip),
+                                                                    port_id= new_node.add_port_id, 
+                                                                    start_channel= this_lsp.occ_chnl[0],
+                                                                    end_channel= this_lsp.occ_chnl[-1],
+                                                                    experiment1=0,
+                                                                    experiment2=0)
+                    datapath.send_msg(mod)
+                    self.logger.info('a OSNR monitor request is sent by RYU. (Monitoring: _handle_OSNR_monitoring_request)') 
+                    self.logger.debug('msg_id = %d'% msg_id)
+                    self.logger.debug('node_id = %d' % Database.Data.phy_topo.get_node_id_by_ip(new_node.node_ip))
+                    self.logger.debug('port_id = %d' % new_node.add_port_id)
+		    hub.sleep(0.05)
+                    #new_msgs.msgs.append(Database.Data.message_id)
+                new_node = this_lsp.explicit_route.route[-1]
+                if new_node != None:
+                    dpid = DPID
+                    datapath = Database.Data.ip2datapath[new_node.node_ip]
+                    msg_id = new_msgs.msgs[1]
+                    mod = datapath.ofproto_parser.OFPTGetOSNRRequest(datapath,
+                                                                    datapath_id=dpid,
+                                                                    message_id= msg_id,
+                                                                    ITU_standards= ITU_C_50, 
+                                                                    node_id= Database.Data.phy_topo.get_node_id_by_ip(new_node.node_ip),
+                                                                    port_id= new_node.drop_port_id, 
+                                                                    start_channel= this_lsp.occ_chnl[0],
+                                                                    end_channel= this_lsp.occ_chnl[-1],
+                                                                    experiment1=0,
+                                                                    experiment2=0)
+                    datapath.send_msg(mod)
+                    self.logger.info('a OSNR monitor request is sent by RYU. (Monitoring: _handle_OSNR_monitoring_request)') 
+                    self.logger.debug('msg_id = %d'% msg_id)
+                    self.logger.debug('node_id = %d' % Database.Data.phy_topo.get_node_id_by_ip(new_node.node_ip))
+                    self.logger.debug('port_id = %d' % new_node.drop_port_id)
+                    #new_msgs.msgs.append(Database.Data.message_id)
                    
-        if (not new_msgs.msgs) and (new_msgs in new_timer.lsp_msg_list):
-            new_timer.lsp_msg_list.remove(new_msgs)
+		if (not new_msgs.msgs) and (new_msgs in new_timer.lsp_msg_list):
+		    new_timer.lsp_msg_list.remove(new_msgs)
         if (new_timer.lsp_msg_list == []) and (new_timer in Database.Data.south_timer):
-            Database.Data.south_timer.remove(new_timer)
+	    Database.Data.south_timer.remove(new_timer)
             self.logger.info('No unprovisioned LSPs are found! (Monitoring: _handle_OSNR_monitoring_request)')
 
-        '''# for testing
-        this_traf = Database.Data.traf_list.find_traf_by_id(ev.traf_id)
-            if this_traf == None:
-                self.logger.critical('Cannot find traffic %d. (Cross_domain_connection_ctrl: _handle_OSNR_monitoring_reply)' % ev.traf_id)
-                return
-        ev_osnr_reply = Custom_event.South_OSNRMonitoringReplyEvent()
-            ev_osnr_reply.traf_id = ev.traf_id
-            ev_osnr_reply.route_type = ev.route_type
-            ev_osnr_reply.result = SUCCESS  
-        # scenario 1
-        if Database.Data.controller_list.this_controller.domain_id == 1:
-            ev_osnr_reply.is_OSNR_all_good = True
-            ev_osnr_reply.is_impairtment_at_this_domain = False
-        else:
-            if this_traf.traf_stage == TRAFFIC_WORKING:
-                ev_osnr_reply.is_OSNR_all_good = False
-                ev_osnr_reply.is_impairtment_at_this_domain = True
-            else:
-            ev_osnr_reply.is_OSNR_all_good = True
-                ev_osnr_reply.is_impairtment_at_this_domain = False
-        # scenario 1 end
-        # scenario 2
-        if Database.Data.controller_list.this_controller.domain_id == 1:
-            if this_traf.traf_stage == TRAFFIC_WORKING:
-                ev_osnr_reply.is_OSNR_all_good = False
-                ev_osnr_reply.is_impairtment_at_this_domain = True
-            else:
-            ev_osnr_reply.is_OSNR_all_good = True
-                ev_osnr_reply.is_impairtment_at_this_domain = False
-        else:
-            ev_osnr_reply.is_OSNR_all_good = True
-            ev_osnr_reply.is_impairtment_at_this_domain = False
-        # scenario 2 end
-        self.send_event('Cross_domain_connection_ctrl',ev_osnr_reply)
-        Database.Data.south_timer.remove(new_timer)
-        # for testing end'''
+	'''# for testing
+	this_traf = Database.Data.traf_list.find_traf_by_id(ev.traf_id)
+        if this_traf == None:
+            self.logger.critical('Cannot find traffic %d. (Cross_domain_connection_ctrl: _handle_OSNR_monitoring_reply)' % ev.traf_id)
+            return
+	ev_osnr_reply = Custom_event.South_OSNRMonitoringReplyEvent()
+        ev_osnr_reply.traf_id = ev.traf_id
+        ev_osnr_reply.route_type = ev.route_type
+        ev_osnr_reply.result = SUCCESS	
+	# scenario 1
+	if Database.Data.controller_list.this_controller.domain_id == 1:
+	    ev_osnr_reply.is_OSNR_all_good = True
+	    ev_osnr_reply.is_impairtment_at_this_domain = False
+	else:
+	    if this_traf.traf_stage == TRAFFIC_WORKING:
+	        ev_osnr_reply.is_OSNR_all_good = False
+	        ev_osnr_reply.is_impairtment_at_this_domain = True
+	    else:
+		ev_osnr_reply.is_OSNR_all_good = True
+	        ev_osnr_reply.is_impairtment_at_this_domain = False
+	# scenario 1 end
+	# scenario 2
+	if Database.Data.controller_list.this_controller.domain_id == 1:
+	    if this_traf.traf_stage == TRAFFIC_WORKING:
+	        ev_osnr_reply.is_OSNR_all_good = False
+	        ev_osnr_reply.is_impairtment_at_this_domain = True
+	    else:
+		ev_osnr_reply.is_OSNR_all_good = True
+	        ev_osnr_reply.is_impairtment_at_this_domain = False
+	else:
+	    ev_osnr_reply.is_OSNR_all_good = True
+	    ev_osnr_reply.is_impairtment_at_this_domain = False
+	# scenario 2 end
+	self.send_event('Cross_domain_connection_ctrl',ev_osnr_reply)
+	Database.Data.south_timer.remove(new_timer)
+	# for testing end'''
             
             
     @set_ev_cls(ofp_event.EventOFPTGetOSNRReply,[CONFIG_DISPATCHER,MAIN_DISPATCHER,DEAD_DISPATCHER])
@@ -184,11 +184,11 @@ class Monitoring(app_manager.RyuApp):
                     if tmp_timer.timer_type == TIMER_OSNR_MONITORING:
                         for tmp_lsp_msg_list in tmp_timer.lsp_msg_list:
                             for key,msg_id in tmp_lsp_msg_list.msgs.items():
-                                if msg_id == message_id:
+				if msg_id == message_id:
                                     self.logger.debug('Monitoring module receives a success osnr reply. msg_id = %d, OSNR = %s' % (message_id,OSNR))
                                     flag_find_msg = True
                                     #tmp_lsp_msg_list.msgs = filter(lambda msg: msg != message_id, tmp_lsp_msg_list.msgs)
-                                    del tmp_lsp_msg_list.msgs[key]
+				    del tmp_lsp_msg_list.msgs[key]
                                     Database.Data.lsp_list.update_lsp_osnr(tmp_timer.traf_id, tmp_lsp_msg_list.lsp_id, Database.Data.phy_topo.get_node_ip_by_id(node_id), OSNR)
                                     if not tmp_lsp_msg_list.msgs:
                                         ev_osnr_reply = Custom_event.South_OSNRMonitoringReplyEvent()
@@ -216,12 +216,12 @@ class Monitoring(app_manager.RyuApp):
                                         else:
                                             self.logger.info('Invalid traffic type! (Monitoring: _handle_OSNR_monitoring_reply)')
                                         tmp_timer.lsp_msg_list.remove(tmp_lsp_msg_list)
-                                        #for recording excusion time
-                                        with open('record_time.txt', 'a') as f:
-                                            f.write('South OSNR monitoring: (route_type = %d) \n' % tmp_lsp_msg_list.route_type)
-                                            f.write(str(time.time() - Database.Data.south_osnr_monitor_time)+'\n')
-                                        Database.Data.south_osnr_monitor_time = 0
-                                        #for recording excusion time end
+					#for recording excusion time
+					with open('record_time.txt', 'a') as f:
+					    f.write('South OSNR monitoring: (route_type = %d) \n' % tmp_lsp_msg_list.route_type)
+					    f.write(str(time.time() - Database.Data.south_osnr_monitor_time)+'\n')
+					Database.Data.south_osnr_monitor_time = 0
+					#for recording excusion time end
                                         break     
                         if tmp_timer.lsp_msg_list == []:
                             Database.Data.south_timer.remove(tmp_timer)

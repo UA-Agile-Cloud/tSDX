@@ -1,7 +1,7 @@
 """
 Used for initialize the database from files
 
-Author:   Yao Li (yaoli@optics.arizona.edu)
+Author:   Yao Li (yaoli@optics.arizona.edu.cn)
 Created:  2017/01/11
 Version:  2.0
 
@@ -26,20 +26,20 @@ class Initialization(app_manager.RyuApp):
                 
     def __init__(self,*args,**kwargs):
         super(Initialization,self).__init__(*args,**kwargs)
-        with open('record_time.txt', 'w') as f: 
-           pass
-           #    print 'Node'
-           self.import_node_from_file(file_path+'phy_node.txt')
-           #    print 'Port'
-           self.import_port_from_file(file_path+'phy_node_port.txt')
-           #    print 'Link'
-           self.import_link_from_file(file_path+'phy_link.txt')
-           #    print 'Controller'
-           self.import_controller_from_file(file_path+'controller.txt')
-           #    print 'Domain sequence'
-           self.import_domain_sequence_from_file(file_path+'domain_sequence.txt')
+	with open('record_time.txt', 'w') as f:	
+	   pass
+        #	print 'Node'
+        self.import_node_from_file(file_path+'phy_node.txt')
+        #	print 'Port'
+        self.import_port_from_file(file_path+'phy_node_port.txt')
+        #	print 'Link'
+        self.import_link_from_file(file_path+'phy_link.txt')
+        #	print 'Controller'
+        self.import_controller_from_file(file_path+'controller.txt')
+        #	print 'Domain sequence'
+        self.import_domain_sequence_from_file(file_path+'domain_sequence.txt')
         
-    '''def start(self):
+    def start(self):
         super(Initialization,self).start()
         hub.sleep(6)
         new_north_traffic_request_ev = Custom_event.North_CrossDomainTrafficRequestEvent()
@@ -56,7 +56,7 @@ class Initialization(app_manager.RyuApp):
         new_north_traffic_request_ev.domain_sequence = [1,2]
         #hub.sleep(1)
         self.send_event('Cross_domain_connection_ctrl', new_north_traffic_request_ev)
-        self.logger.debug("\nFirst north traffic request event")'''
+        self.logger.debug("\nFirst north traffic request event")
 
     def import_node_from_file(self, file_name):
         with open(file_name, 'r') as f:
@@ -68,11 +68,11 @@ class Initialization(app_manager.RyuApp):
                 odom = line.split()        
                 new_node = Database.Phy_node()
                 new_node.node_ip = odom[0]
-                  #print new_node.node_ip
+	              #print new_node.node_ip
                 new_node.node_id = int(odom[1])
-                    #print new_node.node_id
+		            #print new_node.node_id
                 new_node.node_type = int(odom[2])
-                    #print new_node.node_type
+		            #print new_node.node_type
                 Database.Data.phy_topo.node_list.append(new_node)
 #            for node in Database.Data.phy_topo.node_list:
 #                print node.node_ip
@@ -93,7 +93,7 @@ class Initialization(app_manager.RyuApp):
                         for i in range(target_node.port_num):
                             target_node.ports[int(odom[it])] = int(odom[it+1])
                             it += 2
-                              #print target_node.node_ip
+			                  #print target_node.node_ip
                         #print target_node.ports
                         break
 #            for node in Database.Data.phy_topo.node_list:
