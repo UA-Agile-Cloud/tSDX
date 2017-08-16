@@ -62,7 +62,7 @@ class North_bound_message_send(app_manager.RyuApp):
         #print res
         print '========================================================='
         url = '/TrafficReply'
-        conn = httplib.HTTPConnection('192.168.0.1:8888')
+        conn = httplib.HTTPConnection('192.168.0.1:8888') #controller server ip and port
         conn.request(method="POST",url=url,body=data_string) 
         response = conn.getresponse()
         res= response
@@ -81,7 +81,7 @@ class North_bound_message_send(app_manager.RyuApp):
         data_string = json.dumps(status_return)
         print '========================================================='
         url = '/TrafficTeardownReply'
-        conn = httplib.HTTPConnection('192.168.0.1:8888')
+        conn = httplib.HTTPConnection('192.168.0.1:8888') #server ip and port
         conn.request(method="POST",url=url,body=data_string) 
         response = conn.getresponse()
         res= response
@@ -99,7 +99,7 @@ class North_bound_message_send(app_manager.RyuApp):
         data_string = json.dumps(status_return)
         print '========================================================='
         url = '/TrafficStateUpdate'
-        conn = httplib.HTTPConnection('192.168.0.1:8888')
+        conn = httplib.HTTPConnection('192.168.0.1:8888') #server ip and port
         conn.request(method="POST",url=url,body=data_string) 
         response = conn.getresponse()
         res= response

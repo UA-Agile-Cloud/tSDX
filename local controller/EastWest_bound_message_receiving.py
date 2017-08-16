@@ -38,6 +38,7 @@ class EastWest_message_receive(app_manager.RyuApp):
                 
     def __init__(self,*args,**kwargs):
         super(EastWest_message_receive,self).__init__(*args,**kwargs)
+        self.listening_data_thread = []       
         self.listening_thread = hub.spawn(self._listening)
         
     def _listening(self):
@@ -62,17 +63,25 @@ class EastWest_message_receive(app_manager.RyuApp):
         s.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)   
         s.bind((host, port))
         s.listen(1)
-        Database.Data.socket_server,addr=s.accept()   
-        self.logger.info("Connection from: {0}".format(addr))
-        self.logger.debug('Server done!\n')
+        client_list = []
         while True:
+            #Database.Data.socket_server,addr=s.accept()
+            connection,addr=s.accept()  
+            if addr not in client_list: 
+                self.logger.info("Connection from: {0}".format(addr))
+                client_list.append(addr)
+                self.listening_data_thread.append(hub.spawn(self._listening_data,connection))
+                self.logger.debug('Server done!\n')
+            hub.sleep(0.1)
+        #while True:
             
         #hub.sleep(0.1)
             
-    #def start(self):
+    def _listening_data(self, connection):
     #super(EastWest_message_receive,self).start()
-    #while True:
-            data = Database.Data.socket_server.recv(4096)             # receive some data from connection, with buffer=1024 bytes
+        while True:
+            #data = Database.Data.socket_server.recv(4096)             # receive some data from connection, with buffer=1024 bytes
+            data = connection.recv(4096)   
             #data = pickle.loads(data)
             head = data[0:4]
             head = struct.unpack('!i', head)

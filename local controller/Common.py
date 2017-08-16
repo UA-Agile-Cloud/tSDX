@@ -129,7 +129,7 @@ WAVE_NUM = 90
 # other parameters
 
 log_level = logging.DEBUG
-file_path = 'init_files/Ryu_2/'
+file_path = 'init_files/Ryu_3/'
 
 # other parameters end
 

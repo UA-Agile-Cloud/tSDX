@@ -102,16 +102,10 @@ class North_bound_message_receive(ControllerBase):#app_manager.RyuApp):
                 print req
                 return 'North_TrafficStateUpdateEvent'
 
-            elif request_class == 'CorssDomainRequest' or request_class == 'CorssDomainRequest_rev':
+            elif request_class == 'CorssDomainRequest':
                 traffic_request = Custom_event.North_CrossDomainTrafficRequestEvent()
-                if int(decoded['Source_Node'])<4:
-                    traffic_request.src_node_ip = '192.168.1.'+ decoded['Source_Node']
-                if int(decoded['Source_Node'])>3:
-                    traffic_request.src_node_ip = '192.168.2.'+ str(int(decoded['Source_Node'])-3)
-                if int(decoded['Destination_Node'])>3:
-                    traffic_request.dst_node_ip = '192.168.2.'+ str(int(decoded['Destination_Node'])-3)
-                if int(decoded['Destination_Node'])<4:
-                    traffic_request.dst_node_ip = '192.168.1.'+ decoded['Destination_Node']
+                traffic_request.src_node_ip = decoded['Source_Node_IP']
+                traffic_request.dst_node_ip = decoded['Destination_Node_IP']
                 traffic_request.traf_id = int(decoded['Msg_ID'])
                 traffic_request.traf_stage = TRAFFIC_WORKING
                 traffic_request.traf_state =TRAFFIC_RECEIVE_REQUEST         
@@ -119,13 +113,10 @@ class North_bound_message_receive(ControllerBase):#app_manager.RyuApp):
                 traffic_request.prot_type = TRAFFIC_REROUTING_RESTORATION
                 traffic_request.up_time = None
                 traffic_request.down_time = None
-                traffic_request.bw_demand = 0
+                traffic_request.bw_demand = 50
                 traffic_request.OSNR_req = 0
-                traffic_request.domain_num = 2
-                if request_class == 'CorssDomainRequest':
-                    traffic_request.domain_sequence = [1, 2]
-                elif request_class == 'CorssDomainRequest_rev':
-                    traffic_request.domain_sequence = [2, 1]
+                traffic_request.domain_num = decoded['Domain_Num']
+                traffic_request.domain_sequence = decoded['Domain_Sequence']
                 RESTAPIobj.send_event('Cross_domain_connection_ctrl', traffic_request)
 
                 status_return = {'Result':'CorssDomainRequest Received',
@@ -149,16 +140,10 @@ class North_bound_message_receive(ControllerBase):#app_manager.RyuApp):
                 print '.............................'
                 print data_string
                 return data_string
-            elif request_class == 'IntraDomainRequest' or request_class == 'IntraDomainRequest_rev':
+            elif request_class == 'IntraDomainRequest':
                 traffic_request = Custom_event.North_IntraDomainTrafficRequestEvent()
-                if int(decoded['Source_Node'])<4:
-                    traffic_request.src_node_ip = '192.168.1.'+ decoded['Source_Node']
-                if int(decoded['Source_Node'])>3:
-                    traffic_request.src_node_ip = '192.168.2.'+ str(int(decoded['Source_Node'])-3)
-                if int(decoded['Destination_Node'])>3:
-                    traffic_request.dst_node_ip = '192.168.2.'+ str(int(decoded['Destination_Node'])-3)
-                if int(decoded['Destination_Node'])<4:
-                    traffic_request.dst_node_ip = '192.168.1.'+ decoded['Destination_Node']
+                traffic_request.src_node_ip = decoded['Source_Node_IP']
+                traffic_request.dst_node_ip = decoded['Destination_Node_IP']
                 traffic_request.traf_id = int(decoded['Msg_ID'])
                 traffic_request.traf_stage = TRAFFIC_WORKING
                 traffic_request.traf_state = TRAFFIC_RECEIVE_REQUEST           
@@ -169,10 +154,7 @@ class North_bound_message_receive(ControllerBase):#app_manager.RyuApp):
                 traffic_request.bw_demand = 0
                 traffic_request.OSNR_req = 0
                 traffic_request.domain_num = 1
-                if request_class == 'IntraDomainRequest':
-                    traffic_request.domain_sequence = [1, 1]
-                if request_class == 'IntraDomainRequest_rev':
-                    traffic_request.domain_sequence = [2, 2]
+                traffic_request.domain_sequence = decoded['Domain_Sequence']
                 RESTAPIobj.send_event('Intra_domain_connection_ctrl', traffic_request)
                 status_return = {'Result':'IntraDomainRequest Received',
                                  'Traf_ID': traffic_request.traf_id,

@@ -42,7 +42,7 @@ class Initialization(app_manager.RyuApp):
     def start(self):
         super(Initialization,self).start()
         hub.sleep(6)
-        new_north_traffic_request_ev = Custom_event.North_CrossDomainTrafficRequestEvent()
+        '''new_north_traffic_request_ev = Custom_event.North_CrossDomainTrafficRequestEvent()
         new_north_traffic_request_ev.traf_id = 1
         new_north_traffic_request_ev.traf_stage = TRAFFIC_WORKING
         new_north_traffic_request_ev.traf_state = TRAFFIC_RECEIVE_REQUEST
@@ -56,7 +56,7 @@ class Initialization(app_manager.RyuApp):
         new_north_traffic_request_ev.domain_sequence = [1,2]
         #hub.sleep(1)
         self.send_event('Cross_domain_connection_ctrl', new_north_traffic_request_ev)
-        self.logger.debug("\nFirst north traffic request event")
+        self.logger.debug("\nFirst north traffic request event")'''
 
     def import_node_from_file(self, file_name):
         with open(file_name, 'r') as f:

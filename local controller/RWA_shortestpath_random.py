@@ -72,7 +72,6 @@ def routing(traf_id, sources, destinations, bw_demand):
         next_add_port_id_ = sources[0][1]
         for this_link in Database.Data.phy_topo.link_list:
             if (this_link.dst_node_ip == dst_) and (this_link.src_node_ip == src_):
-                ITU_ST = this_link.ITU_Standards*25
                 add_port_id_ = next_add_port_id_                
                 drop_port_id_ = this_link.src_port_id
                 next_add_port_id_ = this_link.dst_port_id
@@ -87,7 +86,7 @@ def routing(traf_id, sources, destinations, bw_demand):
     print [traf_id_, route_type_, cost_, route_, common_avai_chnls_]
     if common_avai_chnls_ == []:
         return None
-    if len(common_avai_chnls_) < (bw_demand/ITU_ST):
+    if len(common_avai_chnls_) < (bw_demand/50):
         return None
     else:
         paths.append([traf_id_, route_type_, cost_, route_, common_avai_chnls_])
@@ -134,7 +133,6 @@ def rerouting(traf_id, sources, destinations, bw_demand):
         next_add_port_id_ = sources[0][1]
         for this_link in Database.Data.phy_topo.link_list:
             if (this_link.dst_node_ip == dst_) and (this_link.src_node_ip == src_):
-                ITU_ST = this_link.ITU_Standards*25
                 add_port_id_ = next_add_port_id_                
                 drop_port_id_ = this_link.src_port_id
                 next_add_port_id_ = this_link.dst_port_id
@@ -150,7 +148,7 @@ def rerouting(traf_id, sources, destinations, bw_demand):
     print [traf_id_, route_type_, cost_, route_, common_avai_chnls_]
     if common_avai_chnls_ == []:
         return None
-    if len(common_avai_chnls_) < (bw_demand/ITU_ST):
+    if len(common_avai_chnls_) < (bw_demand/50):
         return None
     else:
         paths.append([traf_id_, route_type_, cost_, route_, common_avai_chnls_])
@@ -165,14 +163,10 @@ def rsc_allocation(traf_id, bw_demand):
         if Database.Data.intra_domain_path_list.intra_domain_path_list[i].traf_id == traf_id:
             common_avai_chnls_ = Database.Data.intra_domain_path_list.intra_domain_path_list[i].chnl
             path_id_ = Database.Data.intra_domain_path_list.intra_domain_path_list[i].path_id
-            route_ = Database.Data.intra_domain_path_list.intra_domain_path_list[i].route
-            for this_link in Database.Data.phy_topo.link_list:
-                if (this_link.src_node_ip == route_[0].node_ip) and (this_link.dst_node_ip == route_[1].node_ip):
-                    ITU_ST = this_link.ITU_Standards
     res_bw_ = list(common_avai_chnls_)
-    while len(res_bw_) > bw_demand/ITU_ST :
+    while len(res_bw_) > bw_demand/50 :
         res_bw_.remove(random.choice(res_bw_))
-    if (list(res_bw_) != []) and len(res_bw_) == bw_demand/ITU_ST:
+    if (list(res_bw_) != []) and len(res_bw_) == bw_demand/50:
         res_allc_.append([path_id_, res_bw_])
         print res_allc_
         return res_allc_
