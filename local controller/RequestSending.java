@@ -1,37 +1,122 @@
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
 import java.net.HttpURLConnection;
 import java.net.URL;
-
 import java.io.File;
 import java.io.FileNotFoundException;
 import java.util.Scanner;
+import java.util.PriorityQueue;
+import java.util.List;
+import java.util.ArrayList;
+import java.util.Collections;
 
-
-import java.util.regex.Matcher;
-import java.util.regex.Pattern;
-
-import java.io.BufferedReader;
-
-import java.io.InputStreamReader;
-import java.io.PrintWriter;
-import java.net.ServerSocket;
-import java.net.Socket;
-
-public class RequestSending {
-
-    final static String url1 = "http://192.168.1.0:8080/TrafficRequest";
-    final static String url2 = "http://192.168.2.0:8080/TrafficRequest";
-    //final static String url1 = "http://192.168.0.1:8080/PCE/channel/set";
+    public class RequestSending {
     //final static String url = "http://150.135.248.39:9090/PCE/channel/set";
-    //final static String params = "{\"Source_Node\": \"2\", \"Destination_Node\": \"8\"}";
+    final static String[] url = {
+            "http://192.168.3.0:8080/TrafficRequest",
+            "http://192.168.2.0:8080/TrafficRequest",
+            "http://192.168.1.0:8080/TrafficRequest",
+
+    };
+
+    //set the filepath to read the node info and request
+    final static String file_path = "/home/jk/IdeaProjects/appadd1/src/";
+
+    //==========================start of Dikjstra for domain sequence routing============================
+    //define each domain as a node or vertex
+    public static class Vertex implements Comparable<Vertex> {
+        public final String name;
+        public Edge[] adjacencies;
+        public double minDistance = Double.POSITIVE_INFINITY;
+        public Vertex previous;
+        public Vertex(String argName) { name = argName; }
+        public String toString() { return name; }
+        public int compareTo(Vertex other)
+        {
+            return Double.compare(minDistance, other.minDistance);
+        }
+
+    }
+
+    //define the link between two domains. Unidirecational link.
+    public static class Edge {
+        public final Vertex target;
+        public final double weight;
+        public Edge(Vertex argTarget, double argWeight)
+        { target = argTarget; weight = argWeight; }
+    }
+
+    //Dikjstra algorithm
+    public static void computePaths(Vertex source) {
+        source.minDistance = 0.;
+        PriorityQueue<Vertex> vertexQueue = new PriorityQueue<Vertex>();
+        vertexQueue.add(source);
+        while (!vertexQueue.isEmpty()) {
+            Vertex u = vertexQueue.poll();
+            // Visit each edge exiting u
+            for (Edge e : u.adjacencies)
+            {
+                Vertex v = e.target;
+                double weight = e.weight;
+                double distanceThroughU = u.minDistance + weight;
+                if (distanceThroughU < v.minDistance) {
+                    vertexQueue.remove(v);
+                    v.minDistance = distanceThroughU ;
+                    v.previous = u;
+                    vertexQueue.add(v);
+                }
+            }
+        }
+    }
+
+    //get the Dikjstra path
+    public static List<Vertex> getShortestPathTo(Vertex target) {
+        List<Vertex> path = new ArrayList<Vertex>();
+        for (Vertex vertex = target; vertex != null; vertex = vertex.previous)
+            path.add(vertex);
+        Collections.reverse(path);
+        return path;
+    }
+
+    //use the node or vertex name to get the vertex
+    public static Vertex ToVertex(String name, Vertex v[]){
+        for (int i=0; i<v.length;i++) {
+            if (v[i].name.equals(name)){
+                return v[i];
+            }
+        }
+        return null;
+    }
+
+    //initialization with the topology. Example case: 3 domain connecting eaching other
+    public static Vertex[] initial(){
 
 
+
+        Vertex v[]= new Vertex[3];
+        v[0] = new Vertex("1");
+        v[1] = new Vertex("2");
+        v[2] = new Vertex("3");
+        v[0].adjacencies = new Edge[]{ new Edge(v[1], 1)};
+        v[1].adjacencies = new Edge[]{ new Edge(v[2], 1), new Edge(v[0], 1)};
+        v[2].adjacencies = new Edge[]{ new Edge(v[1], 1)};
+        return v;
+    }
+
+    //calculate the routing domain seq with the source and destination domain
+    public static List<Vertex> domain_sequence(Vertex x, Vertex y) {
+        computePaths(x);
+        System.out.println(x + " to " + y + ": " + y.minDistance);
+        List<Vertex> path = getShortestPathTo(y);
+        System.out.println("Path: " + path);
+        return path;
+    }
+//==============================End of domain sequence calculation==========================
+
+    //post a request with Http protocol
     public static String post(String strURL, String params) {
-        System.out.println(strURL);
-        System.out.println(params);
+        //System.out.println(params);
         try {
             URL url = new URL(strURL);
             HttpURLConnection connection = (HttpURLConnection) url
@@ -72,151 +157,92 @@ public class RequestSending {
         return "error";
     }
 
-
-    public static String[] splitt(String str) {
-        String strr = str.trim();
-        String[] abc = strr.split("[\\p{Space}]+");
-        String str1 = abc[0];
-        String str2 = abc[1];
-        String str3 = abc[2];
-        String str4 = abc[3];
-        String str5 = abc[4];
-        System.out.println(str1);
-        System.out.println(str2);
-        System.out.println(str3);
-        System.out.println(str4);
-        System.out.println(str5);
-        return abc;
+    //do token for a request, and store the information of the request
+    public static String[] GetRequest(String str) {
+        String str_ = str.trim();
+        String[] token = str_.split("[\\p{Space}]+");
+        //String str1 = token[0];   // message id
+        //String str2 = token[1];   // request type (add/tear)
+        //String str3 = token[2];   // source node
+        //String str4 = token[3];   // dest node
+        //String str5 = token[4];   // tear traf when non-zero
+        return token;
     }
 
-    public static String rqst_idtf (String rqst[]) {
+    //get a node information from a file
+    public static String[][] GetNode(Scanner node_list){
+        int node_num= Integer.parseInt(node_list.nextLine());
+        System.out.println(node_num);
+        if (node_num>0)
+            System.out.println("reading node information");
+        else
+            System.out.println("no node");
+        String topo_[][]= new String[node_num][4];
+        for(int i=0; i<node_num;i++){
+            String str = node_list.nextLine();
+            String str_ = str.trim();
+            String[] token = str_.split("[\\p{Space}]+");
+            topo_[i][0] = token[0];  // node id
+            topo_[i][1] = token[1];  // node ip
+            topo_[i][2] = token[2];  // node domain id
+            topo_[i][3] = token[3];  // node domain id
+        }
+        return topo_;
+    }
+
+    //identify the request if it is intra-domain or crossdomain setup based on source and destination nodes
+    public static String rqst_idtf_ (String rqst[], String topo_[][]){
         String result = "no request";
-        if (rqst[1].equals("add") && Integer.parseInt(rqst[2]) < 4 && Integer.parseInt(rqst[3]) > 3) {
+        if (rqst[1].equals("add") && (Integer.parseInt(topo_[Integer.parseInt(rqst[2])-1][2]) != Integer.parseInt(topo_[Integer.parseInt(rqst[3])-1][2]))) {
             result = "CorssDomainRequest";
-            //System.out.println(result);
             return result;
         }
-        if (rqst[1].equals("add") && Integer.parseInt(rqst[3]) < 4 && Integer.parseInt(rqst[2]) > 3) {
-            result = "CorssDomainRequest_rev";
-            //System.out.println(result);
-            return result;
-        }
-        if (rqst[1].equals("add") && Integer.parseInt(rqst[2]) < 4 && Integer.parseInt(rqst[3]) < 4) {
-            //if (Integer.parseInt(rqst[2]) > Integer.parseInt(rqst[3]))
-                //return "IntraDomainRequest_rev";
+        if (rqst[1].equals("add") && (Integer.parseInt(topo_[Integer.parseInt(rqst[2])-1][2]) == Integer.parseInt(topo_[Integer.parseInt(rqst[3])-1][2]))) {
             result = "IntraDomainRequest";
-            //System.out.println(result);
             return result;
         }
-        if (rqst[1].equals("add") && Integer.parseInt(rqst[2]) > 3 && Integer.parseInt(rqst[3]) > 3) {
-            //if (Integer.parseInt(rqst[2]) > Integer.parseInt(rqst[3]))
-                //return "IntraDomainRequest_rev";
-            result = "IntraDomainRequest_rev";
-            //System.out.println(result);
-            return result;
-        }
-        if (rqst[1].equals("tear") && Integer.parseInt(rqst[2]) < 4 && Integer.parseInt(rqst[3]) > 3) {
-            result = "CrossDomainTearDown";
-            //System.out.println(result);
-            return result;
-        }
-        if (rqst[1].equals("tear") && Integer.parseInt(rqst[3]) < 4 && Integer.parseInt(rqst[2]) > 3) {
-            result = "CrossDomainTearDown";
-            //System.out.println(result);
-            return result;
-        }
-        if (rqst[1].equals("tear") && Integer.parseInt(rqst[2]) < 4 && Integer.parseInt(rqst[3]) < 4) {
-            //if (Integer.parseInt(rqst[2]) > Integer.parseInt(rqst[3]))
-                //return "IntraDomainTearDown_rev";
-            result = "IntraDomainTearDown";
-            //System.out.println(result);
-            return result;
-        }
-        if (rqst[1].equals("tear") && Integer.parseInt(rqst[2]) > 3 && Integer.parseInt(rqst[3]) > 3) {
-            //if (Integer.parseInt(rqst[2]) > Integer.parseInt(rqst[3]))
-                //return "IntraDomainTearDown_rev";
-            result = "IntraDomainTearDown";
-            //System.out.println(result);
-            return result;
-        }
-        //System.out.println(result);
         return result;
     }
 
-
-    public static void HTTPServer() {
-        try {
-            ServerSocket ss=new ServerSocket(8888);
-
-            while(true){
-                Socket socket=ss.accept();
-                BufferedReader bd=new BufferedReader(new InputStreamReader(socket.getInputStream()));
-
-                String requestHeader;
-                int contentLength=0;
-                while((requestHeader=bd.readLine())!=null&&!requestHeader.isEmpty()){
-
-                    System.out.println(requestHeader);
-                    //System.out.println(bd.readLine());
-                    if(requestHeader.startsWith("Content-Length")) {
-
-                        String regEx="[^0-9]";
-                        Pattern p = Pattern.compile(regEx);
-                        String str= "\""+requestHeader+"\"";
-                        Matcher m = p.matcher(str);
-                        String num = m.replaceAll("").trim();
-                        contentLength = Integer.parseInt(num);
-                        //System.out.println( m.replaceAll("").trim());
-                    }
-                }
-
-                StringBuffer sb=new StringBuffer();
-                if(contentLength>0){
-                    for (int i = 0; i < contentLength; i++) {
-                        sb.append((char)bd.read());
-
-                    }
-                    System.out.println(sb.toString());
-
-                }
-
-                PrintWriter pw=new PrintWriter(socket.getOutputStream());
-                pw.println("HTTP/1.1 200 OK");
-                pw.println("Content-type:text/html");
-                pw.println();
-                pw.println("<h1>ok！</h1>");
-
-                pw.flush();
-                socket.close();
-            }
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-
-
-
     public static void main(String[] args) {
         try {
-            Scanner in = new Scanner(new File("/home/jk//Desktop/user_request.txt"));
-
+            Scanner in = new Scanner(new File(file_path + "user_request.txt"));
+            Scanner node_list = new Scanner(new File(file_path + "node_list.txt"));
+            String[][] topo_=GetNode(node_list);
             while (in.hasNextLine()) {
                 String str = in.nextLine();
-                String [] abc = splitt(str);
-                String rqst_idtf = rqst_idtf(abc);
-                System.out.println("The request is : " + rqst_idtf);
-                String params = "{\"Msg_ID\": " + "\"" + abc[0] + "\"" + ", \"Source_Node\": " +  "\"" + abc[2] + "\"" + ", \"Destination_Node\": "  + "\"" +  abc[3] + "\"" +
-                        ", \"Request_Class\": " + "\"" + rqst_idtf + "\"" + ", \"TearTraf\": " + "\"" + abc[4]  + "\"" + "}";// + ", \"Request_Class\":" + rqst_idtf + "}";
-                post(url2, params);
-                post(url1, params);
-
+                String [] request = GetRequest(str);
+                String rqst_idtf = rqst_idtf_(request,topo_);
+                //System.out.println("The request is : " + rqst_idtf);
+                String src_ip= topo_[Integer.parseInt(request[2])-1][1];
+                String src_domain_ip= topo_[Integer.parseInt(request[2])-1][3];
+                String dst_ip= topo_[Integer.parseInt(request[3])-1][1];
+                String dst_domain_ip= topo_[Integer.parseInt(request[3])-1][3];
+                Vertex[] v = initial();
+                Vertex src_v = ToVertex(topo_[Integer.parseInt(request[2])-1][2],v);
+                // System.out.println(src_v);
+                Vertex dst_v = ToVertex(topo_[Integer.parseInt(request[3])-1][2],v);
+                //System.out.println(dst_v);
+                List<Vertex> path = domain_sequence(src_v, dst_v);
+                int domain_num = path.size();//(int)dst_v.minDistance;
+                System.out.println(Integer.toString(domain_num));
+                String params = "{\"Msg_ID\": " + "\"" + request[0] + "\""
+                        + ", \"Source_Node\": " +  "\"" + request[2] + "\""
+                        + ", \"Source_Node_IP\": " +  "\"" + src_ip + "\""
+                        + ", \"Source_Node_Domain_IP\": " +  "\"" + src_domain_ip + "\""
+                        + ", \"Destination_Node\": "  + "\"" +  request[3] + "\""
+                        + ", \"Destination_Node_IP\": " +  "\"" + dst_ip + "\""
+                        + ", \"Destination_Node_Domain_IP\": " +  "\"" + dst_domain_ip + "\""
+                        + ", \"Request_Class\": " + "\"" + rqst_idtf + "\""
+                        + ", \"Domain_Num\": "  + domain_num
+                        + ", \"Domain_Sequence\": "  + path
+                        + ", \"TearTraf\": " + "\"" + request[4]  + "\"" + "}";
+                for(int j=0; j<url.length;j++) {
+                    post(url[j], params);   //posting to all domains
+                }
             }
-            //HTTPServer();
         } catch (FileNotFoundException e) {
             e.printStackTrace();
         }
-
     }
-
 }
