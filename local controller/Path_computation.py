@@ -157,7 +157,7 @@ class Path_computation(app_manager.RyuApp):
             if destinations == None:
                 self.logger.critical('Cannot find a interlink. (Path_computation: _handle_cross_domain_traffic_pc_request)')
                 return
-            paths = RWA.routing(ev.traf_id, sources, destinations, traf.bw_dmd)    #routing. calculate one path
+            paths = RWA.routing(ev.traf_id, sources, destinations, traf.bw_demand)    #routing. calculate one path
             
             # from Yiwen
             #src_node_ip = traf.src_node_ip
@@ -278,7 +278,6 @@ class Path_computation(app_manager.RyuApp):
                     self.send_event('EastWest_message_send',cross_domain_pc_ev)
                 else:
                     resources = RWA.rsc_allocation(ev.traf_id, traf.bw_dmd)
-                    print resources
                     result = SUCCESS
                     exit_of_previous_domain = list()
                     for path_item in resources:
@@ -288,11 +287,7 @@ class Path_computation(app_manager.RyuApp):
                             result = FAIL
                             break
                         Database.Data.insert_new_lsp(new_path, path_item[1])
-                        print new_path.route[0].node_ip
-                        print new_path.route[0].add_port_id
-                        print Database.Data.phy_topo.get_exit_of_previous_domain(new_path.route[0].node_ip, new_path.route[0].add_port_id)
                         exit_node_port_tmp = Database.Data.phy_topo.get_exit_of_previous_domain(new_path.route[0].node_ip, new_path.route[0].add_port_id)
-                        print exit_node_port_tmp
                         if exit_node_port_tmp == None:
                             self.logger.critical('Can not find inter-domain link. (Path_computation: _handle_cross_domain_pc_request)')
                             result = FAIL

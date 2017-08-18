@@ -1,3 +1,13 @@
+"""
+handshake between Ryu controller and agent
+
+Author:   Weiyang Mo (wmo@optics.arizona.edu)
+Created:  2017/02/17
+Version:  1.0
+
+
+"""
+
 import logging
 import struct
 import threading

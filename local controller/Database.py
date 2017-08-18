@@ -113,12 +113,11 @@ class Phy_topo:
                 return chnls
         return None
         
-    def get_exit_of_previous_domain(self, node_ip, port_id):
+    def get_exit_of_previous_domain(node_ip, port_id)
         """get exit of previous domain by this domain's entry
            input: this domain's entry: [node_ip, port_id]
            output: previous domain's exit: [node_ip, port_id]. If not found, return None
         """
-        print 'test'
         for this_link in self.link_list:
             if (this_link.link_type == LINK_INTER_DOMAIN) and (this_link.dst_node_ip == node_ip) and (this_link.dst_port_id == port_id):
                 return [this_link.src_node_ip, this_link.src_port_id]
@@ -150,8 +149,7 @@ class Phy_topo:
         for node in self.node_list:
             topo[node.node_ip] = []
         for link in self.link_list:
-            if link.src_node_ip != '0.0.0.0' and link.link_type == LINK_INTRA_DOMAIN:
-                topo[link.src_node_ip].append(link.dst_node_ip)
+            topo[link.src_node_ip].append(link.dst_node_ip)
             
         '''for i in range(0, len(self.link_list)):
             topo[self.link_list[i].src_node_ip]=[self.link_list[i].dst_node_ip]'''
@@ -463,7 +461,7 @@ class Intra_domain_path_list:
            output: an instance of class Intra_domain_path; if not found, return None
         """
         for this_path in self.intra_domain_path_list:
-            if this_path.path_id == path_id:
+            if this_path.path_id == path_id
                 return this_path
         else:
             return None
@@ -481,8 +479,8 @@ class Intra_domain_path_list:
         if ready_remove != []:
             for this_path in ready_remove:
                 self.intra_domain_path_list.remove(this_path)
-            ready_remove = []
-            return True
+           ready_remove.clear()
+           return True
         else:
             return False
 

@@ -129,13 +129,13 @@ WAVE_NUM = 90
 # other parameters
 
 log_level = logging.DEBUG
-file_path = 'init_files/Ryu_3/'
+file_path = 'init_files/Ryu_1/'
 
 # other parameters end
 
 # tmp use
 
-DPID = 18
+DPID = 17
 
 # tmp use end
 

@@ -2,10 +2,11 @@
 Generate events after receiving north-bound messages 
 
 Author:   Yao Li (yaoli@optics.arizona.edu.cn)
+          Jiakai Yu (jiakaiyu@email.arizona.edu)
 Created:  2017/01/16
 Version:  1.0
 
-Last modified by Yao: 2017/01/20
+Last modified by Jiakai: 2017/08/13
 
 """
 
