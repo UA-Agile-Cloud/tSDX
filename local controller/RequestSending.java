@@ -1,3 +1,12 @@
+/*
+Generate Light-path request and send it to Ryu via HTTP protocol 
+
+Author:   Jiakai Yu (jiakaiyu@email.arizona.edu)
+Created:  2017/02/01
+Version:  1.0
+Last modified by Jiakai: 2017/08/13
+*/
+
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStreamWriter;
@@ -11,8 +20,8 @@ import java.util.List;
 import java.util.ArrayList;
 import java.util.Collections;
 
-    public class RequestSending {
-    //final static String url = "http://150.135.248.39:9090/PCE/channel/set";
+public class RequestSending {
+        
     final static String[] url = {
             "http://192.168.3.0:8080/TrafficRequest",
             "http://192.168.2.0:8080/TrafficRequest",
@@ -91,8 +100,6 @@ import java.util.Collections;
 
     //initialization with the topology. Example case: 3 domain connecting eaching other
     public static Vertex[] initial(){
-
-
 
         Vertex v[]= new Vertex[3];
         v[0] = new Vertex("1");
