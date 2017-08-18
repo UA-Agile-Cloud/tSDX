@@ -1,4 +1,11 @@
+/*
+Receive message from Ryu via HTTP protocol 
 
+Author:   Jiakai Yu (jiakaiyu@email.arizona.edu)
+Created:  2017/02/01
+Version:  1.0
+Last modified by Jiakai: 2017/03/01
+*/
 
 import java.io.IOException;
 
