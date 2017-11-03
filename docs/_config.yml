@@ -1,7 +1,7 @@
 # Setup
 title:        transparent Software-Defined Exchange (tSDX)
 tagline:      FASTER, SAFER AND CHEAPER FOR INTER-DOMAIN EXCHANGE
-baseurl:      ""
+baseurl:      "https://ua-agile-cloud.github.io/tSDX/"
 paginate:     1
 url:          https://github.com/UA-Agile-Cloud/tSDX
 
